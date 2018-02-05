@@ -21,6 +21,7 @@ let showSequence = true;
 function initialize(){
 	readTextFile();
 	initializeActionListeners();
+	changeHTMLDOM();
 }
 
 // local file reading [jQuery] taken from https://stackoverflow.com/a/10112551
@@ -78,11 +79,14 @@ function drawRuler(){
 
 // adds the ruler interval, can be edited by the user [D3] @ drawRuler()
 function addRulerInterval(){
+	// update current ruler interval
+	rulerInterval = Number($("#ruler-interval").val()); 
+	
 	let interval = 0
-			intervalCount = Math.round((maxChrBound / 7) / rulerInterval) + 1
+			intervalCount = Math.round((maxChrBound / 7) / rulerInterval)
 			textInterval = 0;
 
-	for (var i = 0; i < intervalCount; i++) {
+	for(var i = 0; i < intervalCount; i++) {
 		// adds the vertical line indicator
 		svg.append('line')
 			.attr('x1', 0 + interval)
@@ -142,6 +146,7 @@ function adjustPanSVG(){
 
 // event listeners for html elements [jQuery] @ initialize()
 function initializeActionListeners(){
+
 	// reloads the visualization on chr change
 	$('#chr-num-select').on('change', function(){
 		renderVisualization();
@@ -157,6 +162,16 @@ function initializeActionListeners(){
 		}
 		renderVisualization();
 	})
+
+	$('#ruler-interval').on('change', function(){
+		renderVisualization();
+	})
+	
+}
+
+// HTML DOM manipulations [jQuery] @ initialize()
+function changeHTMLDOM(){	
+	$("#ruler-interval").attr("value", "20");
 }
 
 initialize();
