@@ -17,3 +17,5 @@ TODO
  ☐ pwedeng gawan ng options for user friendliness
   ☐ adjust ruler interval
   ☐ show sequence text
+ ☐ baka lang may ilagay ka pa kapag dinouble click yung track (rectangle representation) : trackDoubleClick()
+ 

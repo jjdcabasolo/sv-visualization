@@ -3,11 +3,13 @@
 
 // GLOBAL CONSTANTS
 // - file-related
-// const fileDirRefGenome = "data/IRGSP-1.0_genome.fa";
-const fileDirRefGenome = "data/dummydata.txt";
+// const fileDirRefGenome = 'data/IRGSP-1.0_genome.fa';
+const fileDirRefGenome = 'data/dummydata.txt';
 // - svg-related
-const svg = d3.select("#sv-visualization");
+const svg = d3.select('#sv-visualization');
 const svgTopMargin = 50; // in px
+const svgLeftMargin = 20; // in px
+const trackHeight = 10;
 
 // GLOBAL VARIABLES
 let referenceGenome = [];
@@ -28,23 +30,23 @@ function initialize(){
 function readTextFile(){
 	$.get(fileDirRefGenome, function(data) {
 		let referenceGenomeArray = [];
-		data = data.replace(/[\n\s]/g, "");
+		data = data.replace(/[\n\s]/g, '');
 		referenceGenomeArray = data.split(/>chr\d*/g);
 		referenceGenomeArray.shift();
 		noOfChr = referenceGenomeArray.length;
 
 		constructReferenceGenome(referenceGenomeArray);
 		renderVisualization();
-	}, "text");
+	}, 'text');
 }
 
 // creates the referenceGenome object @ readTextFile()
 function constructReferenceGenome(array){
 	for(let i = 0; i < noOfChr; i++){
 		let chrObj = {};	
-		chrObj["num"] = i + 1;
-		chrObj["seq"] = array[i];
-		chrObj["len"] = array[i].length;
+		chrObj['num'] = i + 1;
+		chrObj['seq'] = array[i];
+		chrObj['len'] = array[i].length;
 		referenceGenome[i] = chrObj;
 	}
 }
@@ -53,6 +55,7 @@ function constructReferenceGenome(array){
 function renderVisualization(){
 	svg.selectAll('*').remove(); // clear svg
 	drawRuler();
+	drawReferenceGenome();
 	adjustPanSVG();
 }
 
@@ -67,7 +70,7 @@ function drawRuler(){
 	// draws the horizontal ruler
 	svg.append('line')
 		.attr('x1', 0)
-		.attr('x2', maxChrBound)
+		.attr('x2', maxChrBound + svgLeftMargin)
 		.attr('y1', svgTopMargin)
 		.attr('y2', svgTopMargin)
 		.attr('stroke-width', 2)
@@ -77,76 +80,114 @@ function drawRuler(){
 	addSequenceText();
 }
 
-// adds the ruler interval, can be edited by the user [D3] @ drawRuler()
-function addRulerInterval(){
-	// update current ruler interval
-	rulerInterval = Number($("#ruler-interval").val()); 
-	
-	let interval = 0
-			intervalCount = Math.round((maxChrBound / 7) / rulerInterval)
-			textInterval = 0;
+	// adds the ruler interval, can be edited by the user [D3] @ drawRuler()
+	function addRulerInterval(){
+		// update current ruler interval
+		rulerInterval = Number($('#ruler-interval').val()); 
 
-	for(var i = 0; i < intervalCount; i++) {
-		// adds the vertical line indicator
-		svg.append('line')
-			.attr('x1', 0 + interval)
-			.attr('x2', 0 + interval)
-			.attr('y1', svgTopMargin - 10)
-			.attr('y2', svgTopMargin)
-			.attr('stroke-width', 1)
-			.attr('stroke', 'black');
+		let interval = 0
+				intervalCount = Math.round((maxChrBound / 7) / rulerInterval)
+				textInterval = 0;
 
-		// adds the interval text
-	  svg.append('text')
-	    .attr('x', 2 + interval)
-	    .attr('y', svgTopMargin - 3)
-	    .text(textInterval)
-	    .attr('font-family', 'Courier, "Lucida Console", monospace')
-	    .attr('font-size', '12px')
-	    .attr('fill', 'black')
-	    .style('pointer-events', 'none');		
+		for(var i = 0; i < intervalCount; i++) {
+			// adds the vertical line indicator
+			svg
+				.append('line')
+					.attr('x1', 0 + interval + svgLeftMargin)
+					.attr('x2', 0 + interval + svgLeftMargin)
+					.attr('y1', svgTopMargin - 10)
+					.attr('y2', svgTopMargin)
+					.attr('stroke-width', 1)
+					.attr('stroke', 'black');
 
-		interval = interval + (rulerInterval * 7);
-		textInterval = textInterval + rulerInterval;
+			// adds the interval text
+		  svg
+		  	.append('text')
+			    .attr('x', 2 + interval + svgLeftMargin)
+			    .attr('y', svgTopMargin - 3)
+			    .attr('font-family', 'Courier, "Lucida Console", monospace')
+			    .attr('font-size', '12px')
+			    .attr('fill', 'black')
+		    .text(textInterval)
+		    .style('pointer-events', 'none');		
+
+			interval = interval + (rulerInterval * 7);
+			textInterval = textInterval + rulerInterval;
+		}
 	}
+
+	// adds the sequence text, can be toggled [D3] @ drawRuler()
+	function addSequenceText(){
+		// draws the sequence text
+		if(showSequence){
+		  svg
+		  	.append('text')
+					.attr('x', 0 + svgLeftMargin)
+					.attr('y', svgTopMargin + 25)
+					.attr('font-family', 'Courier, "Lucida Console", monospace')
+					.attr('font-size', '12px')
+					.attr('fill', 'black')
+				.text(chrSequence)
+				.style('pointer-events', 'none');  
+		}
+	}
+
+// draws the reference genome line [D3] @drawRuler()
+function drawReferenceGenome(){
+	// pattern on mmouse hover, code taken from: http://jsfiddle.net/yduKG/3/
+	svg
+	  .append('defs')
+	  .append('pattern')
+	    .attr('id', 'diagonalHatch')
+	    .attr('patternUnits', 'userSpaceOnUse')
+	    .attr('width', 4)
+	    .attr('height', 4)
+	  .append('path')
+	    .attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
+	    .attr('stroke', '#000000')
+	    .attr('stroke-width', 1);
+
+	// the reference genome line
+	svg
+		.append('rect')
+			.attr('x', 0 + svgLeftMargin)
+			.attr('y', svgTopMargin + 30)
+			.attr('width', maxChrBound)
+			.attr('height', trackHeight + 10)
+			.attr('trackID', 'reference-genome')
+			.attr('color', '#d9d9d9')
+		.style('fill', '#d9d9d9')
+		.on('mouseover', trackMouseOver)
+    .on('mouseout', trackMouseOut)
+    .on('dblclick', trackDoubleClick);
 }
 
-// adds the sequence text, can be toggled [D3] @ drawRuler()
-function addSequenceText(){
-	// draws the sequence text
-	if(showSequence){
-	  svg.append('text')
-	    .attr('x', 0)
-	    .attr('y', svgTopMargin + 10)
-	    .text(chrSequence)
-	    .attr('font-family', 'Courier, "Lucida Console", monospace')
-	    .attr('font-size', '12px')
-	    .attr('fill', 'black')
-	    .style('pointer-events', 'none');  
-	}
+// highlight effect on hover [D3] @ drawReferenceGenome()
+function trackMouseOver() {
+  d3.select(this).style('fill', 'url(#diagonalHatch)');
+}
+
+// returns the previous color of the highlighted track [D3] @ drawReferenceGenome()
+function trackMouseOut() {
+  const color = d3.select(this).attr('color');
+  d3.select(this).style('fill', color);
+}
+
+function trackDoubleClick() {
+	// baka lang may gawin ka pa, like additional modal zzzz
 }
 
 // enables pan and zoom for the whole SVG [D3] @ renderVisualization()
 function adjustPanSVG(){
   // enable pan and zoom
-  const zoom = d3.zoom().scaleExtent([0.1, 5]).on('zoom', () => {
+  const zoom = d3.zoom().scaleExtent([0.5, 5]).on('zoom', () => {
     svg.attr('transform', d3.event.transform);
   });
   svgZoomed = svg.call(zoom).on('dblclick.zoom', null).append('g');
-
-  // translate so that top of drawing is visible
-  // zoom.translate([0, -svgTopMargin + 25]);
-  // zoom.event(svgZoomed);
-
-  // // resize svg depending on drawing size
-  // const svg2 = d3.select(svg);
-  // svg2.attr('height', svgTopMargin + 50);
-  // svg2.attr('width', Math.max(maxChrBound, $(svg).parent().width()));
 }
 
 // event listeners for html elements [jQuery] @ initialize()
 function initializeActionListeners(){
-
 	// reloads the visualization on chr change
 	$('#chr-num-select').on('change', function(){
 		renderVisualization();
@@ -154,7 +195,7 @@ function initializeActionListeners(){
 
 	// toggles the sequence text
 	$('#toggle-seq-text').on('change', function(){
-		if($("#toggle-seq-text").is(':checked') === true){
+		if($('#toggle-seq-text').is(':checked') === true){
 			showSequence = false;
 		}
 		else{
@@ -171,7 +212,7 @@ function initializeActionListeners(){
 
 // HTML DOM manipulations [jQuery] @ initialize()
 function changeHTMLDOM(){	
-	$("#ruler-interval").attr("value", "20");
+	$('#ruler-interval').attr('value', '20');
 }
 
 initialize();
