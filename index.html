@@ -6,15 +6,49 @@
     <meta name="description" content="sv-visualization">
     <meta name="author" content="Jourish Abasolo">
 
-    <title>Sequence Tube Maps</title>
+    <title>sv-visualization</title>
 
+    <!-- d3.js files -->
     <script src="js/d3.js"></script>
     <script src="js/d3.min.js"></script>
+
+    <!-- jQuery files -->
     <script src="js/jquery-3.2.1.min.js"></script>
+
   </head>
 
   <body>
-    <button id="upload-reference-file">Upload file</button>
-    <div id="reference-genome"></div>
+    <!-- <div id="text"></div> -->
+    <div id="reference-genome">sv-visualization | organism: rice</div>
+    
+    select chromosome number:
+    <select id="chr-num-select">
+      <option value="1">chr 01</option>
+      <option value="2">chr 02</option>
+      <option value="3">chr 03</option>
+      <option value="4">chr 04</option>
+      <option value="5">chr 05</option>
+      <option value="6">chr 06</option>
+      <option value="7">chr 07</option>
+      <option value="8">chr 08</option>
+      <option value="9">chr 09</option>
+      <option value="10">chr 10</option>
+      <option value="11">chr 11</option>
+      <option value="12">chr 12</option>
+    </select>
+
+    <br>chromosome boundaries:
+    <label for="chr-start">start: </label><input type="number" id="chr-start" min="0" name="chr-start">
+    <label for="chr-end">end: </label><input type="number" id="chr-end" min="0" name="chr-end">
+    <button id="chr-coordinates">Go!</button>
+
+    <br>
+    <label for="ruler-interval">ruler interval: </label><input type="number" id="ruler-interval" min="10" step="10" name="ruler-interval">
+    <label for="toggle-seq-text">sequence text: </label><input type="checkbox" id="toggle-seq-text" name="toggle-seq-text">hide<br>
+
+    <br><svg id="sv-visualization" width="100%"></svg>
+    
+    <!-- sv-visualization functions -->
+    <script src="js/sv-visualization.js"></script>
   </body>
 </html>

@@ -1,0 +1,19 @@
+TODO
+
+01 Feb 2018:
+- js
+ ✔ tanungin si sir kung kailangan pang ilagay yung base pair dun sa reference genome line @done (18-02-05 20:21)
+ ✔ find the format of the node variable in tubemap.js - para sa labeling ng reference genome line @done (18-02-05 20:21)
+ ✔ ayusin yung variables ng pagkakadraw ng line (x1, x2, y1, y2) @done (18-02-05 20:21)
+ ☐ add variables para sa current view
+  ☐ current chromosome na nipili
+  ☐ boundary nung current chromosome
+- html
+ ✔ add dropdown para sa selection ng chromosome number @done (18-02-05 20:22)
+ ✔ add buttons for start and end ng view for chromosome @done (18-02-05 20:22)
+ ✔ provide the boundary for each chromosome (end range) @done (18-02-05 20:22)
+
+05 Feb 2018:
+ ☐ pwedeng gawan ng options for user friendliness
+  ☐ adjust ruler interval
+  ☐ show sequence text
