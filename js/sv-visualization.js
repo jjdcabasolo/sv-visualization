@@ -4,26 +4,36 @@
 // GLOBAL CONSTANTS
 // - file-related
 // const fileDirRefGenome = 'data/IRGSP-1.0_genome.fa';
-const fileDirRefGenome = 'data/dummydata.txt';
+const fileDirRefGenome = 'data/dummyref.txt';
 // - svg-related
 const svg = d3.select('#sv-visualization');
 const svgTopMargin = 50; // in px
 const svgLeftMargin = 20; // in px
 const trackHeight = 10;
+const minimumRange = 10;
 
 // GLOBAL VARIABLES
 let referenceGenome = [];
 let noOfChr = 0;
+let startChr = 0;
+let endChr = 0;
+let didUserQueried = false;
 // - svg-related
 let maxChrBound = 0;
 let rulerInterval = 20;
 let showSequence = true;
+// - ui-related
+let showOptions = true;
+let panZoomSVG = null;
+let zoom = true;
+let pan = true;
 
 // initialization
 function initialize(){
 	readTextFile();
 	initializeActionListeners();
 	changeHTMLDOM();
+	setupSemantic();
 }
 
 // local file reading [jQuery] taken from https://stackoverflow.com/a/10112551
@@ -37,18 +47,24 @@ function readTextFile(){
 
 		constructReferenceGenome(referenceGenomeArray);
 		renderVisualization();
+		initializeSetCoordinates();
 	}, 'text');
 }
 
 // creates the referenceGenome object @ readTextFile()
 function constructReferenceGenome(array){
+	let chrList = '';
+
 	for(let i = 0; i < noOfChr; i++){
 		let chrObj = {};	
 		chrObj['num'] = i + 1;
 		chrObj['seq'] = array[i];
 		chrObj['len'] = array[i].length;
 		referenceGenome[i] = chrObj;
+		chrList = chrList + '<option value=' + (i+1) + '>chr ' + (i+1) + '</option>';
 	}
+
+	$('#chr-num-select').append(chrList);
 }
 
 // draw the visualization on the SVG [D3] @ readTextFile()
@@ -56,16 +72,18 @@ function renderVisualization(){
 	svg.selectAll('*').remove(); // clear svg
 	drawRuler();
 	drawReferenceGenome();
-	adjustPanSVG();
+	enablePanAndZoom();
 }
 
 // draw the ruler at the top [D3] @ renderVisualization()
 function drawRuler(){
 	var chrNum = Number($('#chr-num-select option:selected').val()) - 1,
-			currentChr = referenceGenome[chrNum]
-			chrSequence = currentChr.seq.toUpperCase()
+			currentChr = referenceGenome[chrNum],
+			chrSequence = currentChr.seq.toUpperCase(),
 			interval = 0;
-	maxChrBound = currentChr.len*7;
+	maxChrBound = currentChr.len * 7;
+
+	chrSequence = setSequenceRange(chrSequence);
 
 	// draws the horizontal ruler
 	svg.append('line')
@@ -77,8 +95,28 @@ function drawRuler(){
 		.attr('stroke', 'black');
 
 	addRulerInterval();
-	addSequenceText();
+	addSequenceText(chrSequence);
 }
+
+	// sets the sequence range to be displayed @ drawRuler()
+	function setSequenceRange(sequence){
+		$('#max-count').text(maxChrBound/7);
+
+		if(!didUserQueried){
+			$('#chr-start').attr('value', '0');
+			$('#chr-end').attr('value', (maxChrBound/7));
+
+			startChr = 0;
+			endChr = (maxChrBound/7);
+		}
+		else{
+			startChr = Number($('#chr-start').val());
+			endChr = Number($('#chr-end').val());
+			maxChrBound = endChr * 7;
+		}
+
+		return sequence.substring(startChr, endChr);
+	}
 
 	// adds the ruler interval, can be edited by the user [D3] @ drawRuler()
 	function addRulerInterval(){
@@ -86,8 +124,12 @@ function drawRuler(){
 		rulerInterval = Number($('#ruler-interval').val()); 
 
 		let interval = 0
-				intervalCount = Math.round((maxChrBound / 7) / rulerInterval)
+				intervalCount = Math.ceil((maxChrBound / 7) / rulerInterval)
 				textInterval = 0;
+
+		if((maxChrBound / 7) % rulerInterval == 0){
+			intervalCount = intervalCount + 1;
+		}
 
 		for(var i = 0; i < intervalCount; i++) {
 			// adds the vertical line indicator
@@ -117,7 +159,7 @@ function drawRuler(){
 	}
 
 	// adds the sequence text, can be toggled [D3] @ drawRuler()
-	function addSequenceText(){
+	function addSequenceText(chrSequence){
 		// draws the sequence text
 		if(showSequence){
 		  svg
@@ -177,21 +219,72 @@ function trackDoubleClick() {
 	// baka lang may gawin ka pa, like additional modal zzzz
 }
 
-// enables pan and zoom for the whole SVG [D3] @ renderVisualization()
-function adjustPanSVG(){
-  // enable pan and zoom
-  const zoom = d3.zoom().scaleExtent([0.5, 5]).on('zoom', () => {
-    svg.attr('transform', d3.event.transform);
-  });
-  svgZoomed = svg.call(zoom).on('dblclick.zoom', null).append('g');
+// enables pan and zoom for the whole SVG [jQuery plugin] @ renderVisualization()
+function enablePanAndZoom(){
+	if(!panZoomSVG == null)	panZoomSVG.destroy();
+	console.log(panZoomSVG);
+
+	panZoomSVG = svgPanZoom('#sv-visualization', {
+		panEnabled: true,
+		zoomEnabled: true,
+		dblClickZoomEnabled: true,
+		mouseWheelZoomEnabled: true,
+		preventMouseEventsDefault: true,
+		zoomScaleSensitivity: 0.12,
+		minZoom: 0.1,
+		maxZoom: 5,
+		fit: true,
+		contain: false,
+		center: true
+	});
+
+	console.log(panZoomSVG);
+
+	// assign svgpan functions to buttons (zoom and pan buttons)
+	$('#reset-svg').on('click', function(){
+		panZoomSVG.reset();
+	});
+
+	$('#toggle-zoom-svg').on('click', function(){
+		if(!zoom){
+			panZoomSVG.enableZoom();
+			$('#toggle-zoom-svg').html('Zoom enabled');
+		}
+		else{
+			panZoomSVG.disableZoom();
+			$('#toggle-zoom-svg').html('Zoom disabled');
+		}
+		zoom = !zoom;
+	});
+
+	$('#zoom-in-svg').on('click', function(){
+		if(zoom) panZoomSVG.zoomIn();
+	});
+
+	$('#zoom-out-svg').on('click', function(){
+		if(zoom) panZoomSVG.zoomOut();
+	});
+
+	$('#toggle-pan-svg').on('click', function(){
+		if(!pan){
+			panZoomSVG.enablePan();
+			$('#toggle-pan-svg').html('Pan enabled');
+		}
+		else{
+			panZoomSVG.disablePan();
+			$('#toggle-pan-svg').html('Pan disabled');
+		}
+		pan = !pan;
+	});
 }
 
 // event listeners for html elements [jQuery] @ initialize()
 function initializeActionListeners(){
 	// reloads the visualization on chr change
 	$('#chr-num-select').on('change', function(){
+		didUserQueried = false;
 		renderVisualization();
-	})
+	});
 
 	// toggles the sequence text
 	$('#toggle-seq-text').on('change', function(){
@@ -202,17 +295,84 @@ function initializeActionListeners(){
 			showSequence = true;	
 		}
 		renderVisualization();
-	})
+	});
 
 	$('#ruler-interval').on('change', function(){
 		renderVisualization();
-	})
-	
+	});
+}
+
+// initializes the set coordinates event listener on the button after reading the data @ readTextFile()
+function initializeSetCoordinates(){
+	$('#min-range').text(minimumRange);
+
+	$('#chr-coordinates').click(function(){
+		let startChr = Number($('#chr-start').val()),
+				endChr = Number($('#chr-end').val()),
+				maxBound = Number($('#max-count').text());
+
+		if(maxBound < endChr){
+			// checks if the upper bound exceeds the length of the current chromosome
+			$('#range-message').text('The end range exceeds the length of the chromosome.');
+		}
+		else if(startChr > endChr){
+			// checks if the lower bound is greater than the lower bound
+			$('#range-message').text('Start range is larger than end range.');
+		}
+		else if((endChr - startChr) < minimumRange){
+			// checks if the ranges is greater than the set minimum range
+			$('#range-message').text('Check the range. The minimum range is ' + minimumRange + '.');
+		}
+		else{
+			didUserQueried = true;
+			renderVisualization();
+		}
+	});	
 }
 
 // HTML DOM manipulations [jQuery] @ initialize()
 function changeHTMLDOM(){	
+	// set the initial ruler interval to 20
 	$('#ruler-interval').attr('value', '20');
+
+	// set the attributes of the svg
+	$('#sv-visualization').attr('height', '500px');
+	$('#sv-visualization').attr('width', '100%');
+}
+
+// semantic element initializations and enabling [jQuery] @ initialize()
+function setupSemantic(){
+	// initialize and enable semantic sidebar
+	$('.ui.left.sidebar').sidebar({
+		dimPage: false,
+		transition: 'push',
+		exclusive: true,
+		closable: false
+	});
+	$('.ui.left.sidebar').sidebar('attach events', '#left-sidebar-toggle');
+	
+	// makes the option at the sidebar disappear on sidebar close
+	$('#left-sidebar-toggle').on('click', function(){
+		if(showOptions){
+			$('a#left-sidebar-query').css({'-webkit-transform':'translate(-100px, 0px)'});
+			$('a#left-sidebar-settings').css({'-webkit-transform':'translate(-100px, 0px)'});
+			$('a#left-sidebar-details').css({'-webkit-transform':'translate(-100px, 0px)'});
+			$('#return-options').css({'-webkit-transform':'translate(0px, -265px)'});
+		}
+		else{
+			$('a#left-sidebar-query').css({'-webkit-transform':'translate(0px, 0px)'});
+			$('a#left-sidebar-settings').css({'-webkit-transform':'translate(0px, 0px)'});
+			$('a#left-sidebar-details').css({'-webkit-transform':'translate(0px, 0px)'});
+			$('#return-options').css({'-webkit-transform':'translate(0px, 0px)'});
+		}
+		showOptions = !showOptions;
+	});
+	
+	$('.menu .item').tab(); // enable semantic tab
+
+	$('.ui.dropdown').dropdown(); // enable semantic dropdown
+
+	$('.message .close').on('click', function() { $(this).parent().transition('fade'); });
 }
 
 initialize();

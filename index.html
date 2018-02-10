@@ -7,47 +7,120 @@
     <meta name="author" content="Jourish Abasolo">
 
     <title>sv-visualization</title>
-
+    
     <!-- d3.js files -->
-    <script src="js/d3.js"></script>
     <script src="js/d3.min.js"></script>
 
     <!-- jQuery files -->
     <script src="js/jquery-3.2.1.min.js"></script>
 
+    <!-- jQuery plugins -->
+    <script src="js/plugins/svg-pan-zoom.min.js"></script>
+
+    <!-- semantic ui files -->
+    <link rel="stylesheet" href="css/semantic.min.css">
+    <script src="js/semantic.min.js"></script>
+
+    <!-- css -->
+    <link rel="stylesheet" href="css/main.css">
   </head>
 
   <body>
-    <!-- <div id="text"></div> -->
-    <div id="reference-genome">sv-visualization | organism: rice</div>
-    
-    select chromosome number:
-    <select id="chr-num-select">
-      <option value="1">chr 01</option>
-      <option value="2">chr 02</option>
-      <option value="3">chr 03</option>
-      <option value="4">chr 04</option>
-      <option value="5">chr 05</option>
-      <option value="6">chr 06</option>
-      <option value="7">chr 07</option>
-      <option value="8">chr 08</option>
-      <option value="9">chr 09</option>
-      <option value="10">chr 10</option>
-      <option value="11">chr 11</option>
-      <option value="12">chr 12</option>
-    </select>
+    <div class="ui left vertical sidebar menu visible">
+      <div class="item">
+        <h1>sv-visualization</h1>
+        Structural variant visualization using D3.js and jQuery.
+      </div>
 
-    <br>chromosome boundaries:
-    <label for="chr-start">start: </label><input type="number" id="chr-start" min="0" name="chr-start">
-    <label for="chr-end">end: </label><input type="number" id="chr-end" min="0" name="chr-end">
-    <button id="chr-coordinates">Go!</button>
+      <div class="ui tab active" data-tab="query">
+        <div class="item">
+          <h4>Query chromosome region</h4>
+        </div>
+        <div class="item">
+          <label class="ui sub header" for="chr-num-select">Chromosome number:</label>
+          <select class="ui dropdown fluid" id="chr-num-select"></select>
+          <div class="ui sub header">Chromosome length:</div>
+          <span class="ui header" id="max-count"></span>
+        </div>
+        <div class="item">
+          <div class="ui sub header">Range:</div>
+          <div class="ui labeled fluid input">
+            <div class="ui label">Start</div>
+            <input type="number" id="chr-start" min="0" name="chr-start" placeholder="">
+          </div><br>
+          <div class="ui labeled fluid input">
+            <div class="ui label">End</div>
+            <input type="number" id="chr-end" min="0" name="chr-end" placeholder="">
+          </div><br>
+          <button class="ui right floated button" id="chr-coordinates">Go!</button><br><br>
+          <div class="ui sub header">Minimum base pair range:</div>
+          <span class="ui header" id="min-range"></span><br><br><br>
+          <div class="ui negative message transition">
+            <i class="close icon"></i>
+            <div class="header">Failed to query.</div>
+            <span id="range-message"></span>
+          </div>
+        </div>
+      </div>
 
-    <br>
-    <label for="ruler-interval">ruler interval: </label><input type="number" id="ruler-interval" min="10" step="10" name="ruler-interval">
-    <label for="toggle-seq-text">sequence text: </label><input type="checkbox" id="toggle-seq-text" name="toggle-seq-text">hide<br>
+      <div class="ui tab" data-tab="settings">
+        <div class="item">
+          <h4>View settings</h4>
+        </div> 
+      </div>
 
-    <br><svg id="sv-visualization" width="100%"></svg>
-    
+      <div class="ui tab" data-tab="details">
+        <div class="item">
+          <h4>File details</h4>
+        </div> 
+      </div>
+    </div>
+
+    <div class="pusher">
+      <div class="sv-container">
+        <div class="ui menu labeled icon vertical fixed" id="return-options">
+          <div class="header item">
+            <h3>svv</h3>
+          </div>
+          <a class="icon item" id="left-sidebar-query" data-tab="query">
+            <i class="database icon"></i>
+            Query
+          </a>
+          <a class="icon item" id="left-sidebar-settings" data-tab="settings">
+            <i class="settings icon"></i>
+            Settings
+          </a>
+          <a class="icon item" id="left-sidebar-details" data-tab="details">
+            <i class="file icon"></i>
+            Details
+          </a>
+          <a class="icon item" id="left-sidebar-toggle">
+            <i class="sidebar icon"></i>
+            Options
+          </a>
+            
+        </div>
+
+        <div id="sv-visualization-area">
+          <br>
+          <label for="ruler-interval">ruler interval: </label><input type="number" id="ruler-interval" min="10" step="10" name="ruler-interval">
+          <label for="toggle-seq-text">sequence text: </label><input type="checkbox" id="toggle-seq-text" name="toggle-seq-text">hide<br>
+
+          visualization options:
+          <button id="reset-svg">Reset</button>
+          <button id="toggle-zoom-svg">Zoom enabled</button>
+          <button id="zoom-in-svg">+</button>
+          <button id="zoom-out-svg">-</button>
+          <button id="toggle-pan-svg">Pan enabled</button>
+
+          <br>
+          <div id="svg-holder">
+            <svg id="sv-visualization"></svg>
+          </div>      
+        </div>
+      </div>
+    </div>
+
     <!-- sv-visualization functions -->
     <script src="js/sv-visualization.js"></script>
   </body>

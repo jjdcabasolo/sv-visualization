@@ -5,17 +5,37 @@ TODO
  ✔ tanungin si sir kung kailangan pang ilagay yung base pair dun sa reference genome line @done (18-02-05 20:21)
  ✔ find the format of the node variable in tubemap.js - para sa labeling ng reference genome line @done (18-02-05 20:21)
  ✔ ayusin yung variables ng pagkakadraw ng line (x1, x2, y1, y2) @done (18-02-05 20:21)
- ☐ add variables para sa current view
-  ☐ current chromosome na nipili
-  ☐ boundary nung current chromosome
+ ✔ add variables para sa current view @done (18-02-10 20:36)
+  ✔ current chromosome na nipili @done (18-02-06 17:48)
+  ✔ boundary nung current chromosome @done (18-02-10 20:36)
 - html
  ✔ add dropdown para sa selection ng chromosome number @done (18-02-05 20:22)
  ✔ add buttons for start and end ng view for chromosome @done (18-02-05 20:22)
  ✔ provide the boundary for each chromosome (end range) @done (18-02-05 20:22)
 
 05 Feb 2018:
- ☐ pwedeng gawan ng options for user friendliness
-  ☐ adjust ruler interval
-  ☐ show sequence text
+ ✔ pwedeng gawan ng options for user friendliness @done (18-02-06 17:48)
+  ✔ adjust ruler interval @done (18-02-06 17:48)
+  ✔ show sequence text @done (18-02-06 17:48)
  ☐ baka lang may ilagay ka pa kapag dinouble click yung track (rectangle representation) : trackDoubleClick()
+ ✔ gawin yung correct na pagrender ng start at end kapag may nakaset na @done (18-02-06 17:49)
+   ✔ same goes with the ruler, dapat nag-aadjust yung starting variable @done (18-02-06 17:49)
  
+ 06 Feb 2018:
+ ☐ mga itatanong kay sir
+   ☐ minimum range na iseset
+   ☐ kung ok na yung reference genome na initial
+   ☐ paano yung pagkakastore nung reference genome sa html, considering na sobrang laki nung file na iaupload
+   ☐ yung kung paano kukunin yung sv sa file ano yung mga gagamiting variables to represent
+  ☐ medyo shitty yung panning ng svg kapag zoomed out siya - emphasis SHITTY
+  ✔ ayusin yung limits chr(s) @done (18-02-06 20:24)
+    ✔ kapag maliit yung range, nagana pa rin kapag nabago yung ruler interval @done (18-02-06 20:24)
+    ✔ kapag sobra, nageextend yung ruler at yung reference genome line @done (18-02-06 20:24)
+  ✔ reset view button sa svg @done (18-02-10 20:35)
+  ✔ yung sa ruler, pwedeng magnegative yung value (resulting sa walang ruler interval) @done (18-02-10 20:35)
+
+10 Feb 2018:
+  ☐ ilipat yung basic html elements to sidebar (semantic-ized)
+  ☐ ayusin yung shittyness ng svgpanzoom kapag nagload ng panibagong chr
+  ☐ yung starting interval ng ruler pag hindi 0 yung value ayusin
+  ☐ simulan na yung kahit pagrender ng mga sv's
