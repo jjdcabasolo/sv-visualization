@@ -67,6 +67,17 @@
         <div class="item">
           <h4>View settings</h4>
         </div> 
+        <div class="item">
+          <div class="ui sub header">Ruler options:</div>
+          <div class="ui labeled fluid input">
+            <div class="ui label">Interval</div>
+            <input type="number" id="ruler-interval" min="10" step="10" name="ruler-interval">
+          </div><br>
+          <div class="ui fluid toggle checkbox">
+            <input type="checkbox" id="toggle-seq-text" name="toggle-seq-text"><br>
+            <label>Hide sequence text</label>
+          </div><br>
+        </div>
       </div>
 
       <div class="ui tab" data-tab="details">
@@ -80,7 +91,7 @@
       <div class="sv-container">
         <div class="ui menu labeled icon vertical fixed" id="return-options">
           <div class="header item">
-            <h3>svv</h3>
+            <h4>menu</h4>
           </div>
           <a class="icon item" id="left-sidebar-query" data-tab="query">
             <i class="database icon"></i>
@@ -102,16 +113,13 @@
         </div>
 
         <div id="sv-visualization-area">
-          <br>
-          <label for="ruler-interval">ruler interval: </label><input type="number" id="ruler-interval" min="10" step="10" name="ruler-interval">
-          <label for="toggle-seq-text">sequence text: </label><input type="checkbox" id="toggle-seq-text" name="toggle-seq-text">hide<br>
 
-          visualization options:
+          <!-- visualization options:
           <button id="reset-svg">Reset</button>
           <button id="toggle-zoom-svg">Zoom enabled</button>
           <button id="zoom-in-svg">+</button>
           <button id="zoom-out-svg">-</button>
-          <button id="toggle-pan-svg">Pan enabled</button>
+          <button id="toggle-pan-svg">Pan enabled</button> -->
 
           <br>
           <div id="svg-holder">

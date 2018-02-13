@@ -27,7 +27,8 @@ TODO
    ☐ kung ok na yung reference genome na initial
    ☐ paano yung pagkakastore nung reference genome sa html, considering na sobrang laki nung file na iaupload
    ☐ yung kung paano kukunin yung sv sa file ano yung mga gagamiting variables to represent
-  ☐ medyo shitty yung panning ng svg kapag zoomed out siya - emphasis SHITTY
+   ☐ ilan yung sv's? kasi db magmemerge siya, pag may sv magbabranch out, so ilan yung sv's na iiscan sa file
+  ✘ medyo shitty yung panning ng svg kapag zoomed out siya - emphasis SHITTY @cancelled (18-02-13 14:03)
   ✔ ayusin yung limits chr(s) @done (18-02-06 20:24)
     ✔ kapag maliit yung range, nagana pa rin kapag nabago yung ruler interval @done (18-02-06 20:24)
     ✔ kapag sobra, nageextend yung ruler at yung reference genome line @done (18-02-06 20:24)
@@ -35,7 +36,36 @@ TODO
   ✔ yung sa ruler, pwedeng magnegative yung value (resulting sa walang ruler interval) @done (18-02-10 20:35)
 
 10 Feb 2018:
-  ☐ ilipat yung basic html elements to sidebar (semantic-ized)
+  ✔ ilipat yung basic html elements to sidebar (semantic-ized) @done (18-02-13 14:03)
   ☐ ayusin yung shittyness ng svgpanzoom kapag nagload ng panibagong chr
   ☐ yung starting interval ng ruler pag hindi 0 yung value ayusin
   ☐ simulan na yung kahit pagrender ng mga sv's
+
+  ☐ truncate mo na yung real value
+  ☐ flunking 20 dafault (extension nung both sides, equal extension)
+  ☐ deletion minimum range: 10
+  ☐ insertion minimum range: 5
+    ☐ limit: 100 (kung ipapakita na insertion, if below pa dun, di na ipapakita)
+  ☐ yung number of base pairs pag nagbabranch out depende pa rin pero ang set ni sir ay 5bp
+  ☐ kailangang gawin na algo ay idetermine yung portions na may sv's (hotspots daw)
+  ☐ determine overlapping intervals para malaman yung mga regions na may sv - sila lang yung magdedetermine kung magbbranchout ba or not
+    ☐ maximum na range para ivisualize siya 50000bp
+  ☐ mutually exclusive yung pagview ng mga sv types, kung puro insertion ay puro insertion lang, ganown
+  ☐ insertion: parang kagaya na lang nung sa ideogram
+  
+  ☐ select range
+  ☐ select sv types
+
+  yung issu sa file reading ay babashin muna lahat 
+
+  ☐ viewer na by chromosme lang 
+  ☐ lagay sa isang array yung mga indices sa file 
+
+  ☐ start - 50, end + 50 yung reference lang yung may "flakning???"
+  ☐ strictly within the rang eyung mga ipapakitang sv's
+  ☐ pagcimpute nung number of base pairs kung saan magbabranch out, in
+
+  ☐ starting range ng chromosome ay 1, 1-indexing compared sa array in cmsc na 0-indexing !important 
+  ☐ fix the ruler intervals`  
+
+  ☐ responsive width nung sv pag nakabukas yung sidenav

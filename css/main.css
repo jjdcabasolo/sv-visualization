@@ -13,3 +13,9 @@
 #return-options {
 	transition: transform 0.5s ease;
 }
+
+#svg-holder {
+	margin-top: 100px;
+	margin-left: 10px;
+	width: 98%;
+}

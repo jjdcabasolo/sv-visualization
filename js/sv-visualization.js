@@ -9,24 +9,25 @@ const fileDirRefGenome = 'data/dummyref.txt';
 const svg = d3.select('#sv-visualization');
 const svgTopMargin = 50; // in px
 const svgLeftMargin = 20; // in px
-const trackHeight = 10;
-const minimumRange = 10;
+const trackHeight = 10; // in px
+const minimumRange = 10; // in bp
+const flankingValue = 50; // in bp
 
 // GLOBAL VARIABLES
 let referenceGenome = [];
 let noOfChr = 0;
 let startChr = 0;
 let endChr = 0;
-let didUserQueried = false;
 // - svg-related
 let maxChrBound = 0;
 let rulerInterval = 20;
 let showSequence = true;
-// - ui-related
-let showOptions = true;
 let panZoomSVG = null;
 let zoom = true;
 let pan = true;
+// - ui-related
+let showOptions = true;
+let isSidebarOpen = true;
 
 // initialization
 function initialize(){
@@ -46,7 +47,7 @@ function readTextFile(){
 		noOfChr = referenceGenomeArray.length;
 
 		constructReferenceGenome(referenceGenomeArray);
-		renderVisualization();
+		// renderVisualization();
 		initializeSetCoordinates();
 	}, 'text');
 }
@@ -62,6 +63,8 @@ function constructReferenceGenome(array){
 		chrObj['len'] = array[i].length;
 		referenceGenome[i] = chrObj;
 		chrList = chrList + '<option value=' + (i+1) + '>chr ' + (i+1) + '</option>';
+
+		if(i == 0) $('#max-count').text(array[i].length); // loads the length to the max-count div at start
 	}
 
 	$('#chr-num-select').append(chrList);
@@ -72,7 +75,7 @@ function renderVisualization(){
 	svg.selectAll('*').remove(); // clear svg
 	drawRuler();
 	drawReferenceGenome();
-	enablePanAndZoom();
+	// enablePanAndZoom();
 }
 
 // draw the ruler at the top [D3] @ renderVisualization()
@@ -80,52 +83,49 @@ function drawRuler(){
 	var chrNum = Number($('#chr-num-select option:selected').val()) - 1,
 			currentChr = referenceGenome[chrNum],
 			chrSequence = currentChr.seq.toUpperCase(),
-			interval = 0;
+			interval = 0,
+			oneIndexingAdjustment = 2;
 	maxChrBound = currentChr.len * 7;
 
 	chrSequence = setSequenceRange(chrSequence);
 
 	// draws the horizontal ruler
-	svg.append('line')
-		.attr('x1', 0)
-		.attr('x2', maxChrBound + svgLeftMargin)
-		.attr('y1', svgTopMargin)
-		.attr('y2', svgTopMargin)
-		.attr('stroke-width', 2)
-		.attr('stroke', 'black');
+	svg
+		.append('g')
+			.attr('class', 'ruler')
+		.append('line')
+			.attr('x1', 0)
+			.attr('x2', maxChrBound + svgLeftMargin + oneIndexingAdjustment)
+			.attr('y1', svgTopMargin)
+			.attr('y2', svgTopMargin)
+			.attr('stroke-width', 2)
+			.attr('stroke', 'black');
 
-	addRulerInterval();
+	addRulerInterval(oneIndexingAdjustment);
 	addSequenceText(chrSequence);
+
+	$('#sv-visualization').attr('width', maxChrBound + flankingValue); // adjusts the svg for it to be scrollable
 }
 
 	// sets the sequence range to be displayed @ drawRuler()
 	function setSequenceRange(sequence){
 		$('#max-count').text(maxChrBound/7);
 
-		if(!didUserQueried){
-			$('#chr-start').attr('value', '0');
-			$('#chr-end').attr('value', (maxChrBound/7));
-
-			startChr = 0;
-			endChr = (maxChrBound/7);
-		}
-		else{
-			startChr = Number($('#chr-start').val());
-			endChr = Number($('#chr-end').val());
-			maxChrBound = endChr * 7;
-		}
+		startChr = Number($('#chr-start').val() - 1);
+		endChr = Number($('#chr-end').val() - 1);
+		maxChrBound = (endChr - startChr) * 7;
 
 		return sequence.substring(startChr, endChr);
 	}
 
 	// adds the ruler interval, can be edited by the user [D3] @ drawRuler()
-	function addRulerInterval(){
+	function addRulerInterval(oneIndexingAdjustment){
 		// update current ruler interval
 		rulerInterval = Number($('#ruler-interval').val()); 
 
-		let interval = 0
-				intervalCount = Math.ceil((maxChrBound / 7) / rulerInterval)
-				textInterval = 0;
+		let interval = 0,
+				intervalCount = Math.ceil((maxChrBound / 7) / rulerInterval),
+				textInterval = Number($('#chr-start').val());
 
 		if((maxChrBound / 7) % rulerInterval == 0){
 			intervalCount = intervalCount + 1;
@@ -134,9 +134,11 @@ function drawRuler(){
 		for(var i = 0; i < intervalCount; i++) {
 			// adds the vertical line indicator
 			svg
+				.append('g')
+					.attr('class', 'ruler')
 				.append('line')
-					.attr('x1', 0 + interval + svgLeftMargin)
-					.attr('x2', 0 + interval + svgLeftMargin)
+					.attr('x1', 0 + oneIndexingAdjustment + interval + svgLeftMargin)
+					.attr('x2', 0 + oneIndexingAdjustment + interval + svgLeftMargin)
 					.attr('y1', svgTopMargin - 10)
 					.attr('y2', svgTopMargin)
 					.attr('stroke-width', 1)
@@ -144,8 +146,10 @@ function drawRuler(){
 
 			// adds the interval text
 		  svg
+				.append('g')
+					.attr('class', 'ruler')
 		  	.append('text')
-			    .attr('x', 2 + interval + svgLeftMargin)
+			    .attr('x', 2 + oneIndexingAdjustment + interval + svgLeftMargin)
 			    .attr('y', svgTopMargin - 3)
 			    .attr('font-family', 'Courier, "Lucida Console", monospace')
 			    .attr('font-size', '12px')
@@ -282,23 +286,36 @@ function enablePanAndZoom(){
 function initializeActionListeners(){
 	// reloads the visualization on chr change
 	$('#chr-num-select').on('change', function(){
-		didUserQueried = false;
-		renderVisualization();
+		var chrNum = Number($('#chr-num-select').val()) - 1,
+			currentChr = referenceGenome[chrNum];
+
+		$('#max-count').text(currentChr.len);
 	});
 
 	// toggles the sequence text
 	$('#toggle-seq-text').on('change', function(){
-		if($('#toggle-seq-text').is(':checked') === true){
-			showSequence = false;
-		}
-		else{
-			showSequence = true;	
-		}
-		renderVisualization();
+		// if($('#toggle-seq-text').is(':checked') === true){
+		// 	showSequence = false;
+		// }
+		// else{
+		// 	showSequence = true;	
+		// }
+		// renderVisualization();
 	});
 
 	$('#ruler-interval').on('change', function(){
-		renderVisualization();
+		svg.selectAll('.ruler').remove(); // clear svg
+		drawRuler();
+	});
+
+	$('#left-sidebar-toggle').on('click', function(){
+		isSidebarOpen = !isSidebarOpen;
+		if(isSidebarOpen){
+			$('#svg-holder').css('width', '78%');  // TODO: responsive width
+		}
+		else{
+			$('#svg-holder').css('width', '98%'); 
+		}
 	});
 }
 
@@ -307,8 +324,10 @@ function initializeSetCoordinates(){
 	$('#min-range').text(minimumRange);
 
 	$('#chr-coordinates').click(function(){
-		let startChr = Number($('#chr-start').val()),
-				endChr = Number($('#chr-end').val()),
+		$('#svg-holder').css('width', '78%'); // adjusts the svg view at start // TODO: responsive width
+
+		let startChr = Number($('#chr-start').val()) - 1,
+				endChr = Number($('#chr-end').val()) - 1,
 				maxBound = Number($('#max-count').text());
 
 		if(maxBound < endChr){
@@ -324,7 +343,6 @@ function initializeSetCoordinates(){
 			$('#range-message').text('Check the range. The minimum range is ' + minimumRange + '.');
 		}
 		else{
-			didUserQueried = true;
 			renderVisualization();
 		}
 	});	
@@ -371,6 +389,8 @@ function setupSemantic(){
 	$('.menu .item').tab(); // enable semantic tab
 
 	$('.ui.dropdown').dropdown(); // enable semantic dropdown
+
+	$('.ui.checkbox').checkbox(); // enable semantic checkbox
 
 	$('.message .close').on('click', function() { $(this).parent().transition('fade'); });
 }
