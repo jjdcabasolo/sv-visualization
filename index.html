@@ -26,7 +26,7 @@
   </head>
 
   <body>
-    <div class="ui left vertical sidebar menu visible">
+    <div class="ui left vertical sidebar menu visible night-mode">
       <div class="item">
         <h1>sv-visualization</h1>
         Structural variant visualization using D3.js and jQuery.
@@ -35,31 +35,94 @@
       <div class="ui tab active" data-tab="query">
         <div class="item">
           <h4>Query chromosome region</h4>
+          <div class="ui negative message mini transition hidden" id="dismissible-error-query">
+            <i class="close icon"></i>
+            <div class="header" id="query-header"></div>
+            <span id="query-message">
+              <ul class="list"> 
+                <li>Increase the range of your query.</li> 
+                <li>Change the chromosome number.</li> 
+                <li>Try for other structural variant types.</li> 
+              </ul>
+            </span>
+          </div>
         </div>
-        <div class="item">
-          <label class="ui sub header" for="chr-num-select">Chromosome number:</label>
+        <div class="item"> <!-- chr num -->
+          <label class="ui sub header night-mode" for="chr-num-select">Chromosome number:</label>
           <select class="ui dropdown fluid" id="chr-num-select"></select>
-          <div class="ui sub header">Chromosome length:</div>
-          <span class="ui header" id="max-count"></span>
+          <div class="ui mini info message">
+            <div class="header">
+              Chromosome length:
+              <span id="max-count"></span>
+            </div>
+            <p>The unit is in base pairs.</p>
+          </div>          
         </div>
-        <div class="item">
-          <div class="ui sub header">Range:</div>
+        <div class="item"> <!-- range -->
+          <div class="ui sub header night-mode">Range:</div>
           <div class="ui labeled fluid input">
             <div class="ui label">Start</div>
-            <input type="number" id="chr-start" min="0" name="chr-start" placeholder="">
+            <input type="number" id="chr-start" min="1" name="chr-start" placeholder="in base pairs">
           </div><br>
           <div class="ui labeled fluid input">
             <div class="ui label">End</div>
-            <input type="number" id="chr-end" min="0" name="chr-end" placeholder="">
-          </div><br>
-          <button class="ui right floated button" id="chr-coordinates">Go!</button><br><br>
-          <div class="ui sub header">Minimum base pair range:</div>
-          <span class="ui header" id="min-range"></span><br><br><br>
-          <div class="ui negative message transition">
+            <input type="number" id="chr-end" min="1" name="chr-end" placeholder="in base pairs">
+          </div>
+          <div class="ui mini info message">
+            <div class="header">
+              Minimum base pair range:
+              <span id="min-range"></span>
+            </div>
+            <p>Setting a base pair range below the minimum base range will result to failure in query.</p>
+          </div>
+          <div class="ui negative message mini transition hidden" id="dismissible-error-range">
             <i class="close icon"></i>
             <div class="header">Failed to query.</div>
             <span id="range-message"></span>
           </div>
+        </div>
+        <div class="item"> <!-- sv type -->
+          <div class="ui sub header night-mode">Structural variant type:</div>
+          <div class="ui form night-mode">
+            <div class="grouped fields">
+              <div class="field">
+                <div class="ui radio checkbox">
+                  <input type="radio" name="sv-type" value="INS">
+                  <label>Insertion</label>
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui radio checkbox">
+                  <input type="radio" name="sv-type" value="DEL">
+                  <label>Deletion</label>
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui radio checkbox">
+                  <input type="radio" name="sv-type" value="DUP">
+                  <label>Duplication</label>
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui radio checkbox">
+                  <input type="radio" name="sv-type" value="INV">
+                  <label>Inversion</label>
+                </div>
+              </div>
+            </div>
+            <div class="ui mini warning visible message">
+              <div class="header">Note:</div>
+              <p>You can only view one SV type at a time.</p>
+            </div>
+            <div class="ui negative message mini transition hidden" id="dismissible-error-sv">
+              <i class="close icon"></i>
+              <div class="header">Failed to query.</div>
+              <span id="sv-message"></span>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <button class="ui right floated button night-mode" id="chr-coordinates">Go!</button><br>
         </div>
       </div>
 
@@ -68,16 +131,24 @@
           <h4>View settings</h4>
         </div> 
         <div class="item">
-          <div class="ui sub header">Ruler options:</div>
+          <div class="ui sub header night-mode">Ruler options:</div>
           <div class="ui labeled fluid input">
             <div class="ui label">Interval</div>
-            <input type="number" id="ruler-interval" min="10" step="10" name="ruler-interval">
-          </div><br>
+            <input type="number" id="ruler-interval" min="10" step="10" name="ruler-interval" placeholder="in base pairs">
+          </div>
           <div class="ui fluid toggle checkbox">
             <input type="checkbox" id="toggle-seq-text" name="toggle-seq-text"><br>
-            <label>Hide sequence text</label>
+            <label class="inverted-text">Hide sequence text</label>
           </div><br>
         </div>
+        <div class="item">
+          <div class="ui sub header night-mode">Visualization:</div>
+          <div class="ui fluid toggle checkbox">
+            <input type="checkbox" id="toggle-night-mode" name="toggle-night-mode"><br>
+            <label class="inverted-text">Enable night mode</label>
+          </div><br>
+        </div>
+
       </div>
 
       <div class="ui tab" data-tab="details">
@@ -89,7 +160,7 @@
 
     <div class="pusher">
       <div class="sv-container">
-        <div class="ui menu labeled icon vertical fixed" id="return-options">
+        <div class="ui menu labeled icon vertical fixed night-mode" id="return-options">
           <div class="header item">
             <h4>menu</h4>
           </div>
@@ -106,7 +177,7 @@
             Details
           </a>
           <a class="icon item" id="left-sidebar-toggle">
-            <i class="sidebar icon"></i>
+            <i class="window close icon" id="option-toggle"></i>
             Options
           </a>
             
