@@ -10,15 +10,16 @@ const fileDirSVDel = 'data/dummysv-del.txt';
 const svg = d3.select('#sv-visualization');
 const svgTopMargin = 50; // in px
 const svgLeftMargin = 20; // in px
-const trackHeight = 10; // in px
+const trackHeight = 15; // in px
 const minimumRange = 10; // in bp
-const flankingValue = 50; // in bp
+const flankingValue = 20; // in bp
 
 // GLOBAL VARIABLES
 let referenceGenome = [];
 let structuralVariants = {};
 let svToDraw = [];
-let frequency = {};
+let svFrequency = {};
+let hotspotFrequency = {};
 let noOfChr = 0;
 let noOfClusters = 0;
 let startChr = 0; // in bp
@@ -84,7 +85,7 @@ function constructReferenceGenome(array){
 
 // creates the structural variant object @ readTextFile()
 function constructStructuralVariants(array){
-	frequency = {'INS':{}, 'DEL':{}, 'INV':{}, 'DUP':{}};
+	svFrequency = {'INS':{}, 'DEL':{}, 'INV':{}, 'DUP':{}};
 	structuralVariants = {'INS':[], 'DEL':[], 'INV':[], 'DUP':[]};
 
 	for(var i = 0; i < array.length; i++){
@@ -99,8 +100,7 @@ function constructStructuralVariants(array){
 		svObj['detail'] = sv[4];
 		svObj['cluster'] = Number(sv[5]);
 
-		frequency[typeLen[0]][Number(sv[5])] = 1 + (frequency[typeLen[0]][Number(sv[5])] || 0);
-
+		svFrequency[typeLen[0]][Number(sv[5])] = 1 + (svFrequency[typeLen[0]][Number(sv[5])] || 0);
 		structuralVariants[typeLen[0]][structuralVariants[typeLen[0]].length] = svObj;
 	}
 }
@@ -108,10 +108,65 @@ function constructStructuralVariants(array){
 // draw the visualization on the SVG [D3] @ readTextFile()
 function renderVisualization(){
 	svg.selectAll('*').remove(); // clear svg
+	addPopup();
 	drawRuler();
 	drawReferenceGenome();
 	drawStructuralVariants();
 	// enablePanAndZoom();
+}
+
+// add popup on track click [D3 + jQuery] @ renderVisualization()
+function addPopup(){
+	popup =
+	  '<div class="ui pointing basic label">' +
+			'<div class="ui list">' +
+			  '<div class="item">' +
+			    '<div class="ui image large label" id="sv-label">' +
+			      'Structural variant type' +
+			      '<div class="detail" id="sv-label-detail"></div>' +
+			    '</div>' +
+			  '</div>' +
+			  '<div class="item">' +
+			    '<div class="ui image grey large label">' +
+			      'Chr no.' +
+			      '<div class="detail" id="sv-label-chr-detail"></div>' +
+			    '</div>' +
+			    '<div class="content">' +
+				    '<div class="ui image grey large label">' +
+				      'Cluster' +
+				      '<div class="detail" id="sv-label-cluster-detail"></div>' +
+				    '</div>' +
+			    '</div>' +
+			  '</div>' +
+			  '<div class="item">' +
+			    '<div class="ui image grey large label">' +
+			      'Start' +
+			      '<div class="detail" id="sv-label-start-detail"></div>' +
+			    '</div>' +
+			    '<div class="content">' +
+			      '<div class="ui image grey large label">' +
+			        'End' +
+			        '<div class="detail" id="sv-label-end-detail"></div>' +
+			      '</div>' +
+			    '</div>' +
+			  '</div>' +
+			  '<div class="item">' +
+		      '<div class="ui image grey large label">' +
+		        'Details' +
+		        '<div class="detail" id="sv-label-detail-detail"></div>' +
+		      '</div>' +
+			  '</div>' +
+		  '</div>' +
+	  '</div>';
+
+	svg
+		.append('foreignObject')
+			.attr('id', 'popup-element')
+			.attr('x', -1000)
+			.attr('y', -1000)
+			.attr('height', 10)
+			.attr('width', 500);
+	$('#popup-element').html(popup);
 }
 
 // draw the ruler at the top [D3] @ renderVisualization()
@@ -120,7 +175,7 @@ function drawRuler(){
 			currentChr = referenceGenome[chrNum],
 			chrSequence = currentChr.seq.toUpperCase(),
 			interval = 0,
-			oneIndexingAdjustment = 2;
+			rightAllowance = 10;
 	maxChrBound = currentChr.len * 7;
 
 	chrSequence = setSequenceRange(chrSequence, true);
@@ -131,16 +186,16 @@ function drawRuler(){
 			.attr('class', 'ruler')
 		.append('line')
 			.attr('x1', 0)
-			.attr('x2', maxChrBound + svgLeftMargin + oneIndexingAdjustment)
+			.attr('x2', maxChrBound + (svgLeftMargin * 2) + (bpToPx(flankingValue) * 2) + rightAllowance)
 			.attr('y1', svgTopMargin)
 			.attr('y2', svgTopMargin)
 			.attr('stroke-width', 2)
 			.attr('stroke', 'black');
 
-	addRulerInterval(oneIndexingAdjustment);
+	addRulerInterval();
 	addSequenceText(chrSequence);
 
-	$('#sv-visualization').attr('width', maxChrBound + flankingValue); // adjusts the svg for it to be scrollable
+	$('#sv-visualization').attr('width', maxChrBound + (svgLeftMargin * 2) + (bpToPx(flankingValue) * 2) + rightAllowance); // adjusts the svg for it to be scrollable
 }
 
 	// sets the sequence range to be displayed @ drawRuler()
@@ -150,20 +205,22 @@ function drawRuler(){
 		}
 
 		startChr = Number($('#chr-start').val() - 1);
-		endChr = Number($('#chr-end').val() - 1);
+		endChr = Number($('#chr-end').val());
 		maxChrBound = (endChr - startChr) * 7;
 
 		return sequence.substring(startChr, endChr);
 	}
 
 	// adds the ruler interval, can be edited by the user [D3] @ drawRuler()
-	function addRulerInterval(oneIndexingAdjustment){
+	function addRulerInterval(){
 		// update current ruler interval
 		rulerInterval = Number($('#ruler-interval').val()); 
 
-		let interval = 0,
-				intervalCount = Math.ceil((maxChrBound / 7) / rulerInterval),
-				textInterval = Number($('#chr-start').val());
+		let chrStart = Number($('#chr-start').val()),
+				textInterval = chrStart - flankingValue - 1,
+				interval = chrStart - bpToPx(flankingValue),
+				intervalCount = Math.ceil((maxChrBound / 7) / rulerInterval) + 2,
+				flank = bpToPx(flankingValue);
 
 		if((maxChrBound / 7) % rulerInterval == 0){
 			intervalCount = intervalCount + 1;
@@ -175,8 +232,8 @@ function drawRuler(){
 				.append('g')
 					.attr('class', 'ruler')
 				.append('line')
-					.attr('x1', 0 + oneIndexingAdjustment + interval + svgLeftMargin)
-					.attr('x2', 0 + oneIndexingAdjustment + interval + svgLeftMargin)
+					.attr('x1', 0 + interval + svgLeftMargin + flank)
+					.attr('x2', 0 + interval + svgLeftMargin + flank)
 					.attr('y1', svgTopMargin - 10)
 					.attr('y2', svgTopMargin)
 					.attr('stroke-width', 1)
@@ -187,7 +244,7 @@ function drawRuler(){
 				.append('g')
 					.attr('class', 'ruler')
 		  	.append('text')
-			    .attr('x', 2 + oneIndexingAdjustment + interval + svgLeftMargin)
+			    .attr('x', 2 + interval + svgLeftMargin + flank)
 			    .attr('y', svgTopMargin - 3)
 			    .attr('font-family', 'Courier, "Lucida Console", monospace')
 			    .attr('font-size', '12px')
@@ -204,11 +261,12 @@ function drawRuler(){
 	function addSequenceText(chrSequence){
 		// draws the sequence text
 		if(showSequence){
-		  svg
+			let flank = bpToPx(flankingValue);
+		 	 svg
 		  	.append('g')
 		  		.attr('class', 'sequence-text')
 		  	.append('text')
-					.attr('x', 0 + svgLeftMargin)
+					.attr('x', 0 + svgLeftMargin + flank)
 					.attr('y', svgTopMargin + 25)
 					.attr('font-family', 'Courier, "Lucida Console", monospace')
 					.attr('font-size', '12px')
@@ -220,7 +278,10 @@ function drawRuler(){
 
 // draws the reference genome line [D3] @drawRuler()
 function drawReferenceGenome(){
-	// pattern on mmouse hover, code taken from: http://jsfiddle.net/yduKG/3/
+	let flank = bpToPx(flankingValue),
+			rightAllowance = bpToPx(10);
+
+	// // pattern on mmouse hover, code taken from: http://jsfiddle.net/yduKG/3/
 	svg
 	  .append('defs')
 	  .append('pattern')
@@ -230,24 +291,36 @@ function drawReferenceGenome(){
 	    .attr('height', 4)
 	  .append('path')
 	    .attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
-	    .attr('stroke', '#000000')
-	    .attr('stroke-width', 1);
+	    .attr('stroke', '#ffffff')
+	    .attr('stroke-width', 2);
+
+	// provides the bg color at the bottom of the pattern
+  svg
+		.append('g')
+			.attr('class', 'reference-genome-line')
+		.append('rect')
+			.attr('x', 0)
+			.attr('y', svgTopMargin + 30)
+			.attr('width', maxChrBound + svgLeftMargin + (flank * 2) + rightAllowance)
+			.attr('height', trackHeight)
+			.attr('trackID', 'reference-genome')
+			.attr('color', '#424242')
+		.style('fill', '#424242');
 
 	// the reference genome line
 	svg
 		.append('g')
 			.attr('class', 'reference-genome-line')
 		.append('rect')
-			.attr('x', 0 + svgLeftMargin)
+			.attr('x', 0)
 			.attr('y', svgTopMargin + 30)
-			.attr('width', maxChrBound)
-			.attr('height', trackHeight + 10)
+			.attr('width', maxChrBound + svgLeftMargin + (flank * 2) + rightAllowance)
+			.attr('height', trackHeight)	
 			.attr('trackID', 'reference-genome')
-			.attr('color', '#d9d9d9')
-		.style('fill', '#d9d9d9')
+			.attr('color', '#424242')
+		.style('fill', '#424242')
 		.on('mouseover', trackMouseOver)
-    .on('mouseout', trackMouseOut)
-    .on('dblclick', trackDoubleClick);
+    .on('mouseout', trackMouseOut);
 }
 
 	// highlight effect on hover [D3] @ drawReferenceGenome()
@@ -259,16 +332,364 @@ function drawReferenceGenome(){
 	function trackMouseOut(){
 	  const color = d3.select(this).attr('color');
 	  d3.select(this).style('fill', color);
+
+		$('#popup-element').attr('x', '-1000');
+		$('#popup-element').attr('y', '-1000');
+		$('#sv-label').removeClass('teal', 'blue', 'violet', 'purple');
 	}
 
 	// @ drawReferenceGenome()
-	function trackDoubleClick(){
-		// baka lang may gawin ka pa, like additional modal zzzz
+	function trackClick(){
+		let startChr = Number($('#chr-start').val()),
+				endChr = Number($('#chr-end').val()),
+				chrNum = Number($('#chr-num-select').val()),
+				svType = $('input[name=sv-type]:checked').val(),
+				color = svToText(0), x, y;
+
+		// make popup appear
+		x = isSidebarOpen ? event.clientX - 380 : event.clientX - 120;
+		y = event.clientY - 105;
+		$('#popup-element').attr('x', x);
+		$('#popup-element').attr('y', y);
+
+		$('#sv-label').addClass(color);
+		$('#sv-label-detail').text(svType);
+		$('#sv-label-chr-detail').text(chrNum);
+		$('#sv-label-start-detail').text($(this).attr('start') + ' bp');
+		$('#sv-label-end-detail').text($(this).attr('end') + ' bp');
+		$('#sv-label-cluster-detail').text($(this).attr('cluster'));
+		$('#sv-label-detail-detail').text($(this).attr('detail'));
 	}
+
+function assignHotspotNumber(){
+	// iterate through the sv's then
+		// hotspot 1. grp of overlapping intervals 2. magsolo, walang kapatong
+		// hotspot == key na lang sa svToDraw, integer starting from 1
+	// form a hotspot
+		// get start of interval - unang given - minbound
+		// get maxbound - end
+		// if(nextItem.end >= maxBound) maxBound = nextItem.end
+			// updating lang nung maxBound
+		// if(maxBound == nextItem.start) kasama pa yun sa bilang ng number of branches?
+	
+	// if(nextItem.start > maxBound) panibago nang hotspot
+	// use the same set of rules para makabilang yung isang interval sa hotspot
+	let minBound = svToDraw[0]['start'],
+			maxBound = svToDraw[0]['end'],
+			hotspotCount = 0,
+			svBranchHeight = 0;
+
+	svToDraw[0]['hotspot'] = hotspotCount;
+	svToDraw[0]['hotspotIndex'] = 0;
+	hotspotFrequency[hotspotCount] = 1 + (hotspotFrequency[hotspotCount] || 0);
+	svBranchHeight = hotspotFrequency[hotspotCount];
+
+	for(var i = 1; i < svToDraw.length; i++){
+		let nextSV = svToDraw[i];
+
+		if(nextSV['start'] > maxBound){
+			hotspotCount++;
+		}
+	
+		if(nextSV['end'] >= maxBound || maxBound == nextSV['start'] || nextSV['start'] >= minBound || nextSV['end'] <= maxBound){
+			maxBound = nextSV['end'];
+				svToDraw[i]['hotspot'] = hotspotCount;
+		}
+
+		svToDraw[i]['hotspotIndex'] = (hotspotFrequency[hotspotCount] == null) ? 0 : hotspotFrequency[hotspotCount];
+		hotspotFrequency[hotspotCount] = 1 + (hotspotFrequency[hotspotCount] || 0);
+		if(svBranchHeight < hotspotFrequency[hotspotCount]){
+			svBranchHeight = hotspotFrequency[hotspotCount];
+		}
+	}
+
+	console.log(svToDraw);
+	return svBranchHeight;
+}
 
 // draws the sv's within the specified range @ renderVisualization()
 function drawStructuralVariants(){
+	let svType = $('input[name=sv-type]:checked').val(),
+			svClusters = Object.keys(svFrequency[svType]).length,
+			refToSVSpace = 75, // in px
+			bodyBGColor = $('.pusher').css('backgroundColor'),
+			noOfmaxBranches = assignHotspotNumber(),
+			rowsSVG = (noOfmaxBranches % 2) != 0 ? noOfmaxBranches - 1 : noOfmaxBranches, 
+			flank = bpToPx(flankingValue),
+			rightAllowance = bpToPx(10),
+			wew = 0;
 
+	rowsSVG = (trackHeight) * rowsSVG;
+
+	// provides the bg color at the bottom of the pattern
+	// draws the merged and continuous sv line
+	svg
+		.append('g')
+			.attr('class', 'sv-merged-line')
+		.append('rect')
+			.attr('x', 0)
+			.attr('y', svgTopMargin + refToSVSpace + rowsSVG)
+			.attr('width', maxChrBound + svgLeftMargin + (flank * 2) + rightAllowance)
+			.attr('height', trackHeight)
+			.attr('trackID', 'reference-genome')
+			.attr('color', '#ab1a25')
+		.style('fill', '#ab1a25')
+	;
+
+  function locateYCoordinate(array){
+  	let index = array[0],
+  			maxCount = hotspotFrequency[array[1]],
+		  	count = 0,
+		  	flank = bpToPx(flankingValue), 
+		  	x = bpToPx(array[3]) + 150,
+		  	y = 0;
+		  	// shearAngle = ((maxCount / 2) > index) ? -20 : 20;
+		  	// startCoordinateAdjustmentX = ((maxCount / 2) > index) ? 26 : 24,
+		  	// startCoordinateAdjustmentY = ((maxCount / 2) > index) ? 26 : -12,
+		  	// endAngle = ((maxCount / 2) > index) ? 60 : -60;
+
+  	if(maxCount == 1){
+  		// for single-itemed hotspot
+	  	return svgTopMargin + 75 + array[2];
+  	}
+  	else{
+  		// for multiple-itemed hotspot
+  		maxCount = maxCount - 1;
+	  	count = Math.abs(index - maxCount) - (Math.floor(maxCount / 2));
+	  	count = ((maxCount + 1) % 2 == 0) ? count - 1 : count; // to handle even number of hotspots, aligning to merged sv line
+	  	count = (count < 0) ? Math.abs(count) + Math.floor(maxCount / 2) : count;
+  	}
+  	y = svgTopMargin + 75 + (Math.abs(count) * ((trackHeight) + 15));
+
+  	// console.log(index +"index - y"+y+'x'+x);
+
+  	// if(level sa branch){
+  	// 	wew = x + 68;
+  	// }
+  	// if((maxCount / 2) >= index && index != 0){
+	  // 	wew = (index == 1) ? x + 68 : wew - 30;
+  	// }
+  	// console.log(wew);
+
+  	// if(y != (svgTopMargin + refToSVSpace + rowsSVG)){
+			// svg
+			// 	.append('g')
+			// 		.attr('class', 'sv-merged-line')
+			// 	.append('rect')
+			// 		.attr('x', wew)
+			// 		.attr('y', y)
+			// 		.attr('width', trackHeight)
+			// 		.attr('height', (15*((index*2))))
+			// 		.attr('trackID', 'reference-genome')
+			// 		.attr('transform', 'skewX('+shearAngle+')')
+			// 		.attr('color', '#ab1a25')
+			// 	.style('fill', '#ab1a25');
+
+			// svg
+			// 	.append('g')
+			// 		.attr('class', 'sv-merged-line')
+			// 	.append('rect')
+			// 		.attr('x', span)
+			// 		.attr('y', y)
+			// 		.attr('width', trackHeight)
+			// 		.attr('height', (15*((index*2))))
+			// 		.attr('trackID', 'reference-genome')
+			// 		.attr('transform', 'skewX('+(-shearAngle)+')')
+			// 		.attr('color', '#ab1a25')
+			// 	.style('fill', '#ab1a25');
+  	// }
+
+  	return y;
+  }
+
+  function isUpperOrLower(d, type, caseNumber){
+  	let isUpper = d['hotspotIndex'] > (hotspotFrequency[d['hotspot']]/2);
+  	if(d['hotspotIndex'] == 0){
+  		return null;
+  	}
+
+  	switch(type){
+  		case 'span':
+		  	switch(caseNumber){
+		  		case 1:
+						if(isUpper){
+				  		// return 0 + svgLeftMargin + flank + bpToPx(d['start']) - 150;
+						}
+			  		return 0 + svgLeftMargin + flank + bpToPx(d['start']) - 45;
+			  		break;
+		  		case 2:
+						if(isUpper){
+				  		// return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) - (15 * (((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2)) * 2)) + 15;
+						}
+			  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]);
+		  		case 3:
+						if(isUpper){
+							// return (trackHeight) * ((((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2))*2));
+						}
+						return bpToPx(d['length']) + 105;
+		  			break;
+		  		// case 4:
+				  // 	if(isUpper){
+				  // 		return 'skewX(20)';
+				  // 	}
+						// return 'skewX(-20)';
+		  		// 	break;
+		  	}
+		  	break;
+
+		  case 'out':
+				switch(caseNumber){
+		  		case 1:
+						if(isUpper){
+				  		return 0 + svgLeftMargin + flank + bpToPx(d['start']) - 150;
+						}
+			  		return 0 + svgLeftMargin + flank + bpToPx(d['start']);
+			  		break;
+		  		case 2:
+						if(isUpper){
+				  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) - (15 * (((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2)) * 2)) + 15;
+						}
+			  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]);
+		  		case 3:
+						if(isUpper){
+							return (trackHeight) * ((((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2))*2));
+						}
+						return (trackHeight) * ((d['hotspotIndex']*2) );
+		  			break;
+		  		case 4:
+				  	if(isUpper){
+				  		return 'skewX(20)';
+				  	}
+						return 'skewX(-20)';
+		  			break;
+		  	}
+		  	break;
+
+		  case 'in':
+			  switch(caseNumber){
+		  		case 1:
+						if(isUpper){
+				  		return 0 + svgLeftMargin + flank + bpToPx(d['end']) + 150;
+						}
+			  		return 0 + svgLeftMargin + flank + bpToPx(d['end']);
+			  		break;
+		  		case 2:
+						if(isUpper){
+				  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['end']]) - (30 * (((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2)) )) + 15;
+						}
+			  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['end']]);
+		  		case 3:
+						if(isUpper){
+							return (trackHeight) * ((((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2))*2));
+						}
+						return (trackHeight) * ((d['hotspotIndex']*2) );
+		  			break;
+		  		case 4:
+				  	if(isUpper){
+							return 'skewX(-20)';
+				  	}
+			  		return 'skewX(20)';
+		  			break;
+		  	}
+		  	break;
+  	}
+  }
+
+  function formVertices(d){  	
+  	console.log(d);
+		let string = '',
+				base = svgTopMargin + refToSVSpace + rowsSVG + 7.5,
+				y = locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + 7.5,
+				xStart = bpToPx(d['start']) + 100,
+				xEnd = xStart + bpToPx(d['length']) + 100,
+				offset = 10 + ((d['hotspotIndex'] - 1) * 9);
+
+  	if(d['hotspotIndex'] > (hotspotFrequency[d['hotspot']]/2)){
+  		let indexFix = (d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2);
+			offset = 10 + ((indexFix - 1) * 9);
+  	}
+
+		if(d['hotspotIndex'] != 0){
+			string = (xStart - offset) + ',' + base + ' ';
+			string = string + xStart + ',' + y + ' ';
+			string = string + xEnd + ',' + y + ' ';
+			string = string + (xEnd + offset) + ',' + base + ' ';
+
+			return string;
+		}
+
+  }
+
+	svg
+		.selectAll('sv-branch')		
+		.data(svToDraw)
+			.enter()
+		.append('polygon')
+			.attr('points', function(d){ return formVertices(d) })
+		.style('fill', 'none')
+		.style('stroke', '#ab1a25')
+		.style('stroke-width', trackHeight)
+  ;
+
+	// svg
+	// 	.selectAll('sv-branch-out')		
+	// 	.data(svToDraw)
+	// 		.enter()
+	// 	.append('rect')
+	// 		.attr('x', function(d){ return isUpperOrLower(d, 'out', 1) })
+	// 		.attr('y', function(d){ return isUpperOrLower(d, 'out', 2) })
+	// 		.attr('width', trackHeight)
+	// 		.attr('height', function(d){ return isUpperOrLower(d, 'out', 3) })
+	// 		.attr('transform', function(d){ return isUpperOrLower(d, 'out', 4) })
+	// 		.attr('color', '#ab1a25')
+	// 	.style('fill', '#ab1a25');
+
+	// svg
+	// 	.selectAll('sv-branch-in')		
+	// 	.data(svToDraw)
+	// 		.enter()
+	// 	.append('rect')
+	// 		.attr('x', function(d){ return isUpperOrLower(d, 'in', 1) })
+	// 		.attr('y', function(d){ return isUpperOrLower(d, 'in', 2) })
+	// 		.attr('width', trackHeight)
+	// 		.attr('height', function(d){ return isUpperOrLower(d, 'in', 3) })
+	// 		.attr('transform', function(d){ return isUpperOrLower(d, 'in', 4) })
+	// 		.attr('color', '#ab1a25')
+	// 	.style('fill', '#ab1a25');
+
+ //  svg
+	// 	.selectAll('sv-branch-span')		
+	// 	.data(svToDraw)
+	// 		.enter()
+	// 	.append('rect')
+	// 		.attr('x', function(d){ return isUpperOrLower(d, 'span', 1) })
+	// 		.attr('y', function(d){ return isUpperOrLower(d, 'span', 2) })
+	// 		.attr('width', function(d){ return isUpperOrLower(d, 'span', 3)} )
+	// 		.attr('height', trackHeight )
+	// 		// .attr('transform', function(d){ return isUpperOrLower(d, 'span', 4) })
+	// 		.attr('color', '#ab1a25')
+	// 	.style('fill', '#ab1a25');
+	
+	// highlight the range of the given sv 
+	svg
+		.selectAll('sv-sample')		
+		.data(svToDraw)
+			.enter()
+		.append('rect')
+			.attr('x', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) } )
+			.attr('y', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']])} )
+			.attr('width', function(d) { return bpToPx(d['length']) } )
+			.attr('height', trackHeight)
+			.attr('color', 'red')
+			.attr('start', function(d) { return d['start'] })
+			.attr('end', function(d) { return d['end'] })
+			.attr('cluster', function(d) { return d['cluster'] })
+			.attr('detail', function(d) { return d['detail'] })
+		.style('fill', 'red')
+		.on('mouseover', trackMouseOver)
+    .on('mouseout', trackMouseOut)
+    .on('click', trackClick)
+  ;
 }
 
 // enables pan and zoom for the whole SVG [jQuery plugin] @ renderVisualization()
@@ -330,6 +751,11 @@ function enablePanAndZoom(){
 	});
 }
 
+// converts base pair to px
+function bpToPx(bp){
+	return bp * 7;
+}
+
 // event listeners for html elements [jQuery] @ initialize()
 function initializeActionListeners(){
 	// reloads the visualization on chr change
@@ -348,7 +774,6 @@ function initializeActionListeners(){
 				currentChr = referenceGenome[chrNum],
 				chrSequence = currentChr.seq.toUpperCase();
 
-		console.log('asdf')
 		if($('#toggle-seq-text').is(':checked') === true){
 			showSequence = false;
 		}
@@ -382,7 +807,7 @@ function initializeActionListeners(){
 			$('.night-mode').addClass('inverted');
 			$('.ui.toggle.checkbox input:focus:checked~label, .ui.toggle.checkbox input~label')
 				.attr('style', 'color: rgba(255,255,255,.9) !important');
-			$('.pusher').attr('style', 'background-color: rgba(255,255,255,.15) !important');
+			$('.pusher').attr('style', 'background-color: #757575 !important');
 		}
 		else{
 			$('.night-mode').removeClass('inverted');
@@ -463,22 +888,7 @@ function initializeSetCoordinates(){
 		svToDraw = filterSV();
 
 		if(svToDraw.length == 0){
-			switch(svType){
-	    case 'DEL':
-	        svType = 'deletions';
-	        break;
-	    case 'INV':
-	        svType = 'inversions';
-	        break;
-	    case 'DUP':
-	        svType = 'duplications';
-	        break;
-	    case 'INS':
-	        svType = 'insertions';
-	        break;
-	    default:
-	        svType = 'magical SV\'s';
-			}
+			svType = svToText(1);
 
 			// sets the message for the error, automatically closes after 10 seconds
 			$('#query-header').text('There are no ' + svType + ' found from ' + startChr + 'bp - ' + endChr + 'bp at chromosome number ' + chrNum + '.');
@@ -493,23 +903,52 @@ function initializeSetCoordinates(){
 
 		// collects all the sv's inside the range quried by user @ checkSVExistence()
 		function filterSV(){
-			let startChr = Number($('#chr-start').val()) - 1,
-					endChr = Number($('#chr-end').val()) - 1,
+			let startChr = Number($('#chr-start').val()),
+					endChr = Number($('#chr-end').val()),
 					svType = $('input[name=sv-type]:checked').val(),
+					chrNum = Number($('#chr-num-select option:selected').val()),
 					svArray = structuralVariants[svType],
 					returnArray = [];
 			
 			for(var i = 0; i < svArray.length; i++){
 				let start = svArray[i]['start'],
-						end = svArray[i]['end'];
+						end = svArray[i]['end'],
+						num = svArray[i]['chrNum'];
 
-				if(startChr <= start && endChr >= end){
+				if(startChr <= start && endChr >= end && chrNum == num){
 					returnArray[returnArray.length] = svArray[i];
 				}
 			}
 
 			return(returnArray);
 		}
+
+function svToText(index){
+	let svType = $('input[name=sv-type]:checked').val(),
+			names = [
+				['teal', 'blue', 'violet', 'purple'],
+				['deletions', 'inversions', 'duplications', 'insertions'],
+			];
+
+	switch(svType){
+    case 'DEL':
+        svType = names[index][0];
+        break;
+    case 'INV':
+        svType = names[index][1];
+        break;
+    case 'DUP':
+        svType = names[index][2];
+        break;
+    case 'INS':
+        svType = names[index][3];
+        break;
+    default:
+        svType = 'magical SV\'s';
+	}
+
+	return svType;
+}
 
 // HTML DOM manipulations [jQuery] @ initialize()
 function changeHTMLDOM(){	
@@ -535,7 +974,7 @@ function setupSemantic(){
 	// makes the option at the sidebar disappear on sidebar close
 	$('#left-sidebar-toggle').on('click', function(){
 		if(showOptions){
-			$('#return-options').css({'-webkit-transform':'translate(0px, -265px)'});
+			$('#return-options').css({'-webkit-transform':'translate(0px, -330px)'}); // 65px:1block 5px:menu
 			$('#option-toggle').addClass('sidebar').removeClass('window close').transition({animation: 'flash', duration: '0.4s'});
 		}
 		else{
@@ -551,7 +990,14 @@ function setupSemantic(){
 
 	$('.ui.checkbox').checkbox(); // enable semantic checkbox
 
-	$('.message .close').on('click', function() { $(this).parent().transition('fade'); });
+	$('.message .close').on('click', function() { $(this).parent().transition('fade'); }); // initialize message close
+
+	$('#chr-start').val(1);
+	$('#chr-end').val(100);
+	$('#DEL').prop('checked', true); 
+
+
+
 }
 
 initialize();

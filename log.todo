@@ -38,11 +38,12 @@ TODO
 10 Feb 2018:
   ✔ ilipat yung basic html elements to sidebar (semantic-ized) @done (18-02-13 14:03)
   ☐ ayusin yung shittyness ng svgpanzoom kapag nagload ng panibagong chr
-  ☐ yung starting interval ng ruler pag hindi 0 yung value ayusin
-  ☐ simulan na yung kahit pagrender ng mga sv's
+  ✔ yung starting interval ng ruler pag hindi 0 yung value ayusin @done (18-02-17 01:58)
+  ✔ simulan na yung kahit pagrender ng mga sv's @done (18-02-17 01:58)
 
-  ☐ truncate mo na yung real value
-  ☐ flunking 20 dafault (extension nung both sides, equal extension)
+14 Feb 2017:
+  ✘ truncate mo na yung real value @cancelled (18-02-17 01:58)
+  ✘ flunking 20 dafault (extension nung both sides, equal extension) @cancelled (18-02-17 01:58)
   ☐ deletion minimum range: 10
   ☐ insertion minimum range: 5
     ☐ limit: 100 (kung ipapakita na insertion, if below pa dun, di na ipapakita)
@@ -50,22 +51,26 @@ TODO
   ☐ kailangang gawin na algo ay idetermine yung portions na may sv's (hotspots daw)
   ☐ determine overlapping intervals para malaman yung mga regions na may sv - sila lang yung magdedetermine kung magbbranchout ba or not
     ☐ maximum na range para ivisualize siya 50000bp
-  ☐ mutually exclusive yung pagview ng mga sv types, kung puro insertion ay puro insertion lang, ganown
+  ✔ mutually exclusive yung pagview ng mga sv types, kung puro insertion ay puro insertion lang, ganown @done (18-02-17 01:58)
   ☐ insertion: parang kagaya na lang nung sa ideogram
   
-  ☐ select range
-  ☐ select sv types
+  ✔ select range @done (18-02-17 01:57)
+  ✔ select sv types @done (18-02-17 01:57)
 
-  yung issu sa file reading ay babashin muna lahat 
+  ☐ yung issue sa file reading ay babashin muna lahat 
 
   ☐ viewer na by chromosme lang 
   ☐ lagay sa isang array yung mga indices sa file 
 
   ☐ start - 50, end + 50 yung reference lang yung may "flakning???"
   ☐ strictly within the rang eyung mga ipapakitang sv's
-  ☐ pagcimpute nung number of base pairs kung saan magbabranch out, in
+  ☐ pagcompute nung number of base pairs kung saan magbabranch out, in
 
-  ☐ starting range ng chromosome ay 1, 1-indexing compared sa array in cmsc na 0-indexing !important 
-  ☐ fix the ruler intervals`  
+  ✔ starting range ng chromosome ay 1, 1-indexing compared sa array in cmsc na 0-indexing !important @done (18-02-17 01:57)
+  ✔ fix the ruler intervals` @done (18-02-17 01:57)  
 
   ☐ responsive width nung sv pag nakabukas yung sidenav
+
+17 Feb 2018:
+  ☐ yung kukunin yung endpoints (putul-putol na shit; start at end for INV|DUP|DEL) para naka .data na lang
+  ☐ pwede yung input na 1 - 1001 (length chr: 1000) which is sad

@@ -87,25 +87,25 @@
             <div class="grouped fields">
               <div class="field">
                 <div class="ui radio checkbox">
-                  <input type="radio" name="sv-type" value="INS">
+                  <input type="radio" name="sv-type" value="INS" id="INS">
                   <label>Insertion</label>
                 </div>
               </div>
               <div class="field">
                 <div class="ui radio checkbox">
-                  <input type="radio" name="sv-type" value="DEL">
+                  <input type="radio" name="sv-type" value="DEL" id="DEL">
                   <label>Deletion</label>
                 </div>
               </div>
               <div class="field">
                 <div class="ui radio checkbox">
-                  <input type="radio" name="sv-type" value="DUP">
+                  <input type="radio" name="sv-type" value="DUP" id="DUP">
                   <label>Duplication</label>
                 </div>
               </div>
               <div class="field">
                 <div class="ui radio checkbox">
-                  <input type="radio" name="sv-type" value="INV">
+                  <input type="radio" name="sv-type" value="INV" id="INV">
                   <label>Inversion</label>
                 </div>
               </div>
@@ -156,6 +156,12 @@
           <h4>File details</h4>
         </div> 
       </div>
+
+      <div class="ui tab" data-tab="help">
+        <div class="item">
+          <h4>How to use</h4>
+        </div> 
+      </div>
     </div>
 
     <div class="pusher">
@@ -175,6 +181,10 @@
           <a class="icon item" id="left-sidebar-details" data-tab="details">
             <i class="file icon"></i>
             Details
+          </a>
+          <a class="icon item" id="left-sidebar-help" data-tab="help">
+            <i class="help circle outline icon"></i>
+            Help
           </a>
           <a class="icon item" id="left-sidebar-toggle">
             <i class="window close icon" id="option-toggle"></i>
@@ -199,7 +209,7 @@
         </div>
       </div>
     </div>
-
+    
     <!-- sv-visualization functions -->
     <script src="js/sv-visualization.js"></script>
   </body>
