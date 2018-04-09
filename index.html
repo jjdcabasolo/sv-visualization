@@ -26,6 +26,7 @@
   </head>
 
   <body>
+
     <div class="ui left vertical sidebar menu visible night-mode">
       <div class="item">
         <h1>sv-visualization</h1>
@@ -70,10 +71,10 @@
           </div>
           <div class="ui mini info message">
             <div class="header">
-              Minimum base pair range:
-              <span id="min-range"></span>
+              Min: <span id="min-range"></span> bp |
+              Max: <span id="max-range"></span> bp
             </div>
-            <p>Setting a base pair range below the minimum base range will result to failure in query.</p>
+            <p>Setting an incorrect base pair range will result to failure in query.</p>
           </div>
           <div class="ui negative message mini transition hidden" id="dismissible-error-range">
             <i class="close icon"></i>
@@ -86,34 +87,34 @@
           <div class="ui form night-mode">
             <div class="grouped fields">
               <div class="field">
-                <div class="ui radio checkbox">
-                  <input type="radio" name="sv-type" value="INS" id="INS">
+                <div class="ui checkbox">
+                  <input type="checkbox" name="sv-type" value="INS" id="INS">
                   <label>Insertion</label>
                 </div>
               </div>
               <div class="field">
-                <div class="ui radio checkbox">
-                  <input type="radio" name="sv-type" value="DEL" id="DEL">
+                <div class="ui checkbox">
+                  <input type="checkbox" name="sv-type" value="DEL" id="DEL">
                   <label>Deletion</label>
                 </div>
               </div>
               <div class="field">
-                <div class="ui radio checkbox">
-                  <input type="radio" name="sv-type" value="DUP" id="DUP">
+                <div class="ui checkbox">
+                  <input type="checkbox" name="sv-type" value="DUP" id="DUP">
                   <label>Duplication</label>
                 </div>
               </div>
               <div class="field">
-                <div class="ui radio checkbox">
-                  <input type="radio" name="sv-type" value="INV" id="INV">
+                <div class="ui checkbox">
+                  <input type="checkbox" name="sv-type" value="INV" id="INV">
                   <label>Inversion</label>
                 </div>
               </div>
             </div>
-            <div class="ui mini warning visible message">
+            <!-- <div class="ui mini warning visible message">
               <div class="header">Note:</div>
               <p>You can only view one SV type at a time.</p>
-            </div>
+            </div> -->
             <div class="ui negative message mini transition hidden" id="dismissible-error-sv">
               <i class="close icon"></i>
               <div class="header">Failed to query.</div>
@@ -134,12 +135,34 @@
           <div class="ui sub header night-mode">Ruler options:</div>
           <div class="ui labeled fluid input">
             <div class="ui label">Interval</div>
-            <input type="number" id="ruler-interval" min="10" step="10" name="ruler-interval" placeholder="in base pairs">
+            <input type="number" id="ruler-interval" name="ruler-interval" placeholder="in base pairs">
+          </div>
+          <div class="ui mini info message">
+            <div class="header">
+              Min: <span id="min-interval"></span> bp |
+              Max: <span id="max-interval"></span> bp
+            </div>
+            <p>Setting an incorrect value will automatically be adjusted to the boundaries.</p>
+          </div>
+          <div class="ui labeled fluid input">
+            <div class="ui label">Flank</div>
+            <input type="number" id="ruler-flank" name="ruler-flank" placeholder="in base pairs">
+          </div>
+          <div class="ui mini info message">
+            <div class="header">
+              Min: <span id="min-flank"></span> bp |
+              Max: <span id="max-flank"></span> bp
+            </div>
+            <p>Setting an incorrect value will automatically be adjusted to the boundaries.</p>
           </div>
           <div class="ui fluid toggle checkbox">
             <input type="checkbox" id="toggle-seq-text" name="toggle-seq-text"><br>
             <label class="inverted-text">Hide sequence text</label>
-          </div><br>
+          </div>
+          <div class="ui mini warning visible message">
+            <div class="header">Note:</div>
+            <p>Changes are applied on the next visualization render.</p>
+          </div>
         </div>
         <div class="item">
           <div class="ui sub header night-mode">Visualization:</div>
@@ -148,7 +171,6 @@
             <label class="inverted-text">Enable night mode</label>
           </div><br>
         </div>
-
       </div>
 
       <div class="ui tab" data-tab="details">
@@ -166,6 +188,31 @@
 
     <div class="pusher">
       <div class="sv-container">
+        <div class="ui compact labeled icon menu" id="query-details">
+          <div class="item">
+            <i class="info circle icon"></i>
+            Parameters
+          </div>
+          <div class="item adjust-item">
+            <div class="ui tiny horizontal statistic">
+              <div class="value" id="submenu-chr"></div>
+              <div class="label">Chr no.</div>
+            </div>
+          </div>
+          <div class="item adjust-item">
+            <div class="ui tiny horizontal statistic">
+              <div class="value" id="submenu-start"></div>
+              <div class="label">Start</div>
+            </div>
+          </div>
+          <div class="item adjust-item">
+            <div class="ui tiny horizontal statistic">
+              <div class="value" id="submenu-end"></div>
+              <div class="label">End</div>
+            </div>
+          </div>
+        </div>
+
         <div class="ui menu labeled icon vertical fixed night-mode" id="return-options">
           <div class="header item">
             <h4>menu</h4>
@@ -204,12 +251,81 @@
 
           <br>
           <div id="svg-holder">
-            <svg id="sv-visualization"></svg>
+            <div class="ui grid">
+              <div class="sixteen wide column">
+                <svg id="sv-visualization-ins"></svg>
+              </div>
+              <div class="sixteen wide column">
+                <svg id="sv-visualization-del"></svg>
+              </div>
+              <div class="sixteen wide column">
+                <svg id="sv-visualization-inv"></svg>
+              </div>
+              <div class="sixteen wide column">
+                <svg id="sv-visualization-dup"></svg>
+              </div>
+            </div>
           </div>      
         </div>
       </div>
     </div>
+
+    <div class="ui modal tiny basic">
+      <i class="close icon"></i>
+      <div class="ui list">
+        <div class="item">
+          <div class="content">
+            <div class="ui image large label" id="sv-modal">
+              Structural variant type
+              <div class="detail" id="sv-modal-detail"></div>
+            </div>
+            <div class="ui image grey large label">
+              Chr no.
+              <div class="detail" id="sv-modal-chr-detail"></div>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="content">
+            <div class="ui image grey large label">
+              Start
+              <div class="detail" id="sv-modal-start-detail"></div>
+            </div>
+            <div class="ui image grey large label">
+              End
+              <div class="detail" id="sv-modal-end-detail"></div>
+            </div>
+            <div class="ui image grey large label">
+              Cluster
+              <div class="detail" id="sv-modal-cluster-detail"></div>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="content">
+            <div class="ui image grey large label">
+              Sample ID
+              <div class="detail" id="sv-modal-sampleID-detail"></div>
+            </div>        
+          </div>
+        </div>
+        <div class="item">
+          <div class="scrolling content">
+            <div class="ui card fluid" style="border-radius: 6px;">
+              <div class="content">
+                <div class="header">Inserted sequence:</div>
+                <div class="description">
+                  <ul class="ui list" id="sv-modal-insertedSeq-detail">
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>          
+        </div>
+      </div>
+    </div>
     
+
     <!-- sv-visualization functions -->
     <script src="js/sv-visualization.js"></script>
   </body>

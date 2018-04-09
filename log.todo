@@ -17,17 +17,17 @@ TODO
  ✔ pwedeng gawan ng options for user friendliness @done (18-02-06 17:48)
   ✔ adjust ruler interval @done (18-02-06 17:48)
   ✔ show sequence text @done (18-02-06 17:48)
- ☐ baka lang may ilagay ka pa kapag dinouble click yung track (rectangle representation) : trackDoubleClick()
+ ✔ baka lang may ilagay ka pa kapag dinouble click yung track (rectangle representation) : trackDoubleClick() @done (18-03-15 23:28)
  ✔ gawin yung correct na pagrender ng start at end kapag may nakaset na @done (18-02-06 17:49)
    ✔ same goes with the ruler, dapat nag-aadjust yung starting variable @done (18-02-06 17:49)
  
  06 Feb 2018:
  ☐ mga itatanong kay sir
-   ☐ minimum range na iseset
-   ☐ kung ok na yung reference genome na initial
-   ☐ paano yung pagkakastore nung reference genome sa html, considering na sobrang laki nung file na iaupload
+   ✔ minimum range na iseset @done (18-03-15 23:28)
+   ✔ kung ok na yung reference genome na initial @done (18-03-15 23:28)
+   ✔ paano yung pagkakastore nung reference genome sa html, considering na sobrang laki nung file na iaupload @done (18-03-15 23:28)
    ☐ yung kung paano kukunin yung sv sa file ano yung mga gagamiting variables to represent
-   ☐ ilan yung sv's? kasi db magmemerge siya, pag may sv magbabranch out, so ilan yung sv's na iiscan sa file
+   ✘ ilan yung sv's? kasi db magmemerge siya, pag may sv magbabranch out, so ilan yung sv's na iiscan sa file @cancelled (18-03-27 15:04)
   ✘ medyo shitty yung panning ng svg kapag zoomed out siya - emphasis SHITTY @cancelled (18-02-13 14:03)
   ✔ ayusin yung limits chr(s) @done (18-02-06 20:24)
     ✔ kapag maliit yung range, nagana pa rin kapag nabago yung ruler interval @done (18-02-06 20:24)
@@ -43,28 +43,28 @@ TODO
 
 14 Feb 2017:
   ✘ truncate mo na yung real value @cancelled (18-02-17 01:58)
-  ✘ flunking 20 dafault (extension nung both sides, equal extension) @cancelled (18-02-17 01:58)
-  ☐ deletion minimum range: 10
-  ☐ insertion minimum range: 5
-    ☐ limit: 100 (kung ipapakita na insertion, if below pa dun, di na ipapakita)
-  ☐ yung number of base pairs pag nagbabranch out depende pa rin pero ang set ni sir ay 5bp
-  ☐ kailangang gawin na algo ay idetermine yung portions na may sv's (hotspots daw)
-  ☐ determine overlapping intervals para malaman yung mga regions na may sv - sila lang yung magdedetermine kung magbbranchout ba or not
-    ☐ maximum na range para ivisualize siya 50000bp
+  ✔ flunking 20 dafault (extension nung both sides, equal extension) @done (18-03-15 23:29)
+  ✔ deletion minimum range: 10 @done (18-03-15 23:28)
+  ✔ insertion minimum range: 5 @done (18-03-15 23:28)
+    ✔ limit: 100 (kung ipapakita na insertion, if below pa dun, di na ipapakita) @done (18-03-15 23:28)
+  ✘ yung number of base pairs pag nagbabranch out depende pa rin pero ang set ni sir ay 5bp @cancelled (18-03-15 23:29)
+  ✔ kailangang gawin na algo ay idetermine yung portions na may sv's (hotspots daw) @done (18-03-15 23:29)
+  ✔ determine overlapping intervals para malaman yung mga regions na may sv - sila lang yung magdedetermine kung magbbranchout ba or not @done (18-03-15 23:32)
+    ✔ maximum na range para ivisualize siya 50000bp @done (18-03-27 15:03)
   ✔ mutually exclusive yung pagview ng mga sv types, kung puro insertion ay puro insertion lang, ganown @done (18-02-17 01:58)
-  ☐ insertion: parang kagaya na lang nung sa ideogram
+  ✔ insertion: parang kagaya na lang nung sa ideogram @done (18-03-27 15:03)
   
   ✔ select range @done (18-02-17 01:57)
   ✔ select sv types @done (18-02-17 01:57)
 
-  ☐ yung issue sa file reading ay babashin muna lahat 
+  ✘ yung issue sa file reading ay babashin muna lahat @cancelled (18-03-15 23:31)
 
-  ☐ viewer na by chromosme lang 
+  ✔ viewer na by chromosme lang @done (18-03-15 23:31)
   ☐ lagay sa isang array yung mga indices sa file 
 
-  ☐ start - 50, end + 50 yung reference lang yung may "flakning???"
-  ☐ strictly within the rang eyung mga ipapakitang sv's
-  ☐ pagcompute nung number of base pairs kung saan magbabranch out, in
+  ✔ start - 50, end + 50 yung reference lang yung may "flakning???" @done (18-03-15 23:31)
+  ✔ strictly within the range yung mga ipapakitang sv's @done (18-03-15 23:31)
+  ✔ pagcompute nung number of base pairs kung saan magbabranch out, in @done (18-03-15 23:31)
 
   ✔ starting range ng chromosome ay 1, 1-indexing compared sa array in cmsc na 0-indexing !important @done (18-02-17 01:57)
   ✔ fix the ruler intervals` @done (18-02-17 01:57)  
@@ -74,3 +74,77 @@ TODO
 17 Feb 2018:
   ☐ yung kukunin yung endpoints (putul-putol na shit; start at end for INV|DUP|DEL) para naka .data na lang
   ☐ pwede yung input na 1 - 1001 (length chr: 1000) which is sad
+
+1 Mar 2018:
+  ✔ ayusin yung code for branching out @done (18-03-15 23:31)
+    ✔ correctly identify kung paano yung hotspots @done (18-03-15 23:31)
+
+15 Mar 2018:
+  ☐ problem with even number of hotspot (shitty yung itsura)
+
+18 Mar 2018:
+ ✔ ayusin yung paqgbago ng flanking value @done (18-03-18 00:50)
+ ☐ yung pag nagnightmode, shitty yung deletions haha kita pa rin 
+ ☐ ruler highlight -  may linya pababa tapos may number sa taas pag naghover sa ruler line 
+ ☐ mas ok siguro kung yung help ay modal na lang para maraming mailagay
+ ☐ yung scrollbar ng tooltip, constant yung width and height para scrollable
+ ✔ highlight yung branch together with reference para hindi halata yung polyline @done (18-03-18 00:50)
+
+pwede ko po bang iasssume na walang uulit na row na iisa yung kanilang cluster id?
+sample;
+chr01  10  11  AAAATGCATCGATG,GTCAGT,ATCTAG  Rangifer tarandus  1
+chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
+
+27 March 2018:
+ ✔ dup and inv - same color pero may @done (18-04-05 14:36)
+   ✔ iba iba yung kulay per type @done (18-04-05 14:36)
+   ✔ arrowhead sa inversion @done (18-04-05 14:36)
+
+ ✔ nipisan yung branch height pati yung thickness ng track @done (18-04-03 17:10)
+   ✔ set track width to 5 px @done (18-04-03 17:10)
+ 
+ ☐ gawin checkboxes yung radio button para makapamili siya ng multiple types to visualize
+   ☐ pag walang lumabas, may message na lang na wala, hindi na siya makikihati sa view 
+
+ ☐ download image
+ 
+ ☐ yung case na same cluster
+ chr01  10  100  DEL;35  Ninox superciliaris  1
+ chr01  20  100  DEL;35  Ninox superciliaris  1
+ ☐ use the first occurence of the similar cluster
+ ☐ group via cluster 
+ ☐ assumption: sorted by chromosome, then start, then cluster && single occurence
+ ☐ same cluster id, imemerge
+ ☐ branching factor na ay yung branch, isang branch, isang cluster (ichecheck )
+   ☐ hindi pwedeng magkaroon ng in between 
+   ☐ gagamitin ko ay walang redundant cluster
+   ☐ one occurence, preprocess
+   ☐ another file: mapping ng samples
+ ☐ ibibigay ni sir yung file dun sa preprocessing na pagmemerge ng clusters
+   ☐ isang row, isang cluster na lang 
+
+ ☐ save sa SQL yung file na binigay ni sir
+   ☐ yung type at yung length a magkaibang column sa mysql
+
+ ☐ brush
+   ☐ pag gumawa siya ng brush, automatic may lalabas na modal
+ ☐ panibagong tapos may modal na magdiddisplay ng table
+ ☐ button na save as / download as .csv or .tsv
+   ☐ pag csv, pwedeng 
+   chr01,15,50,DEL;35,Ninox superciliaris,1
+   ☐ tsv lahat ng column
+   chr01  10  100  DEL;35  Ninox superciliaris  1
+   ☐ bed chr, start, end, save file extension as .bed
+   chr01  60  80  DEL;20;Rana sp.;17
+
+ ☐ yung admin panel na pagupload ng files
+ ☐ append at overwrite yung files
+
+ ☐ gene annotation file 
+
+ ☐ user defined data
+ ☐ define new sv
+
+ ☐ submit insertion to blast
+   ☐ blastn suite tignan mo na lang yung email ni sir
+   ☐ may button sa ilalim ng inserted sequence para gamitin sa blast something

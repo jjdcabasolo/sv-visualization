@@ -6,13 +6,19 @@
 // const fileDirRefGenome = 'data/IRGSP-1.0_genome.fa';
 const fileDirRefGenome = 'data/dummyref.txt';
 const fileDirSVDel = 'data/dummysv-del.txt';
+// const fileDirSVDel = 'data/dummysv-ins.txt';
 // - svg-related
-const svg = d3.select('#sv-visualization');
+const svg = d3.select('#sv-visualization-ins');
 const svgTopMargin = 50; // in px
 const svgLeftMargin = 20; // in px
-const trackHeight = 15; // in px
+const trackHeight = 5; // in px
 const minimumRange = 10; // in bp
-const flankingValue = 20; // in bp
+const maximumRange = 50000; // in bp
+
+const minInterval = 10; // in bp
+const maxInterval = 100; // in bp
+const minFlank = 20; // in bp
+const maxFlank = 50; // in bp
 
 // GLOBAL VARIABLES
 let referenceGenome = [];
@@ -22,6 +28,7 @@ let svFrequency = {};
 let hotspotFrequency = {};
 let noOfChr = 0;
 let noOfClusters = 0;
+let flankingValue = 20; // in bp
 let startChr = 0; // in bp
 let endChr = 0; // in bp
 // - svg-related
@@ -88,17 +95,27 @@ function constructStructuralVariants(array){
 	svFrequency = {'INS':{}, 'DEL':{}, 'INV':{}, 'DUP':{}};
 	structuralVariants = {'INS':[], 'DEL':[], 'INV':[], 'DUP':[]};
 
+	// check if the sv file is [dup, del, inv] or [ins]
+	let sv = array[0].split(/\t/g),
+			svFourthCol = sv[3].match(/;/g),
+			isDelDupInv = (svFourthCol != null) ? true : false;
+
+	// proceed to data structure composition
 	for(var i = 0; i < array.length; i++){
 		let sv = array[i].split(/\t/g),
-				typeLen = sv[3].split(/;/g), // [0] == type, [1] == length
+				typeLen = (isDelDupInv) ? sv[3].split(/;/g) : ["INS", "1"]; // [0] == type, [1] == length
 				svObj = {};
 
 		svObj['chrNum'] = Number(sv[0].replace(/chr/g, ''));
 		svObj['start'] = Number(sv[1]);
 		svObj['end'] = Number(sv[2]);
 		svObj['length'] = Number(typeLen[1]);
-		svObj['detail'] = sv[4];
+		svObj['sampleID'] = sv[4];
 		svObj['cluster'] = Number(sv[5]);
+
+		if(!isDelDupInv){
+			svObj['insertedSeq'] = sv[3].split(/,/g);
+		}
 
 		svFrequency[typeLen[0]][Number(sv[5])] = 1 + (svFrequency[typeLen[0]][Number(sv[5])] || 0);
 		structuralVariants[typeLen[0]][structuralVariants[typeLen[0]].length] = svObj;
@@ -108,11 +125,23 @@ function constructStructuralVariants(array){
 // draw the visualization on the SVG [D3] @ readTextFile()
 function renderVisualization(){
 	svg.selectAll('*').remove(); // clear svg
+	setDetailsOnSubMenu();
 	addPopup();
 	drawRuler();
 	drawReferenceGenome();
 	drawStructuralVariants();
 	// enablePanAndZoom();
+}
+
+// sets detail on sub menu (appears when sidebar is closed) @ renderVisualization()
+function setDetailsOnSubMenu(){
+	let startChr = Number($('#chr-start').val()),
+			endChr = Number($('#chr-end').val()),
+			chrNum = Number($('#chr-num-select').val());
+
+	$('#submenu-chr').text(chrNum);
+	$('#submenu-start').text(startChr + ' bp');
+	$('#submenu-end').text(endChr + ' bp');
 }
 
 // add popup on track click [D3 + jQuery] @ renderVisualization()
@@ -152,8 +181,8 @@ function addPopup(){
 			  '</div>' +
 			  '<div class="item">' +
 		      '<div class="ui image grey large label">' +
-		        'Details' +
-		        '<div class="detail" id="sv-label-detail-detail"></div>' +
+		        'Sample ID' +
+		        '<div class="detail" id="sv-label-sampleID-detail"></div>' +
 		      '</div>' +
 			  '</div>' +
 		  '</div>' +
@@ -176,9 +205,13 @@ function drawRuler(){
 			chrSequence = currentChr.seq.toUpperCase(),
 			interval = 0,
 			rightAllowance = 10;
+			
+	flankingValue = Number($('#ruler-flank').val())
 	maxChrBound = currentChr.len * 7;
 
 	chrSequence = setSequenceRange(chrSequence, true);
+
+	$('#sv-visualization').attr('width', maxChrBound + (svgLeftMargin * 2) + (bpToPx(flankingValue) * 2)); // adjusts the svg for it to be scrollable
 
 	// draws the horizontal ruler
 	svg
@@ -194,8 +227,6 @@ function drawRuler(){
 
 	addRulerInterval();
 	addSequenceText(chrSequence);
-
-	$('#sv-visualization').attr('width', maxChrBound + (svgLeftMargin * 2) + (bpToPx(flankingValue) * 2) + rightAllowance); // adjusts the svg for it to be scrollable
 }
 
 	// sets the sequence range to be displayed @ drawRuler()
@@ -217,14 +248,76 @@ function drawRuler(){
 		rulerInterval = Number($('#ruler-interval').val()); 
 
 		let chrStart = Number($('#chr-start').val()),
+				chrEnd = Number($('#chr-end').val()),
 				textInterval = chrStart - flankingValue - 1,
 				interval = chrStart - bpToPx(flankingValue),
 				intervalCount = Math.ceil((maxChrBound / 7) / rulerInterval) + 2,
-				flank = bpToPx(flankingValue);
+				flank = bpToPx(flankingValue),
+				startPx = flank + svgLeftMargin + 2;
+				endPx = bpToPx(chrEnd - chrStart) + startPx;
 
 		if((maxChrBound / 7) % rulerInterval == 0){
 			intervalCount = intervalCount + 1;
 		}
+
+		// always add and interval on the start and end of query
+		// adds the vertical line indicator
+		svg
+			.append('g')
+				.attr('class', 'ruler')
+			.append('line')
+				.attr('x1', 0 + startPx)
+				.attr('x2', 0 + startPx)
+				.attr('y1', svgTopMargin - 10)
+				.attr('y2', svgTopMargin)
+				.attr('stroke-width', 1)
+				.attr('stroke', 'red')
+		;
+
+		// adds the interval text
+	  svg
+			.append('g')
+				.attr('class', 'ruler')
+	  	.append('text')
+		    .attr('x', 2 + startPx)
+		    .attr('y', svgTopMargin - 3)
+		    .attr('font-family', 'Courier, "Lucida Console", monospace')
+		    .attr('font-size', '12px')
+		    .attr('fill', 'red')
+	    .text(chrStart)
+	    .style('pointer-events', 'none')
+
+		// adds the vertical line indicator
+		svg
+			.append('g')
+				.attr('class', 'ruler')
+			.append('line')
+				.attr('x1', 0 + endPx)
+				.attr('x2', 0 + endPx)
+				.attr('y1', svgTopMargin - 10)
+				.attr('y2', svgTopMargin)
+				.attr('stroke-width', 1)
+				.attr('stroke', 'blue')
+		;
+
+		// adds the interval text
+	  svg
+			.append('g')
+				.attr('class', 'ruler')
+	  	.append('text')
+		    .attr('x', 2 + endPx)
+		    .attr('y', svgTopMargin - 3)
+		    .attr('font-family', 'Courier, "Lucida Console", monospace')
+		    .attr('font-size', '12px')
+		    .attr('fill', 'blue')
+	    .text(chrEnd)
+	    .style('pointer-events', 'none')
+
+	  var adjustingValue = textInterval + flankingValue + 1;
+	  if(adjustingValue != 1){
+		  adjustingValue = Math.abs(adjustingValue - 10);
+		  textInterval = textInterval + adjustingValue + 1;
+	  }
 
 		for(var i = 0; i < intervalCount; i++) {
 			// adds the vertical line indicator
@@ -237,7 +330,8 @@ function drawRuler(){
 					.attr('y1', svgTopMargin - 10)
 					.attr('y2', svgTopMargin)
 					.attr('stroke-width', 1)
-					.attr('stroke', 'black');
+					.attr('stroke', 'black')
+			;
 
 			// adds the interval text
 		  svg
@@ -250,7 +344,8 @@ function drawRuler(){
 			    .attr('font-size', '12px')
 			    .attr('fill', 'black')
 		    .text(textInterval)
-		    .style('pointer-events', 'none');		
+		    .style('pointer-events', 'none')
+		  ;		
 
 			interval = interval + (rulerInterval * 7);
 			textInterval = textInterval + rulerInterval;
@@ -281,7 +376,7 @@ function drawReferenceGenome(){
 	let flank = bpToPx(flankingValue),
 			rightAllowance = bpToPx(10);
 
-	// // pattern on mmouse hover, code taken from: http://jsfiddle.net/yduKG/3/
+	// pattern on mmouse hover, code taken from: http://jsfiddle.net/yduKG/3/
 	svg
 	  .append('defs')
 	  .append('pattern')
@@ -292,7 +387,8 @@ function drawReferenceGenome(){
 	  .append('path')
 	    .attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
 	    .attr('stroke', '#ffffff')
-	    .attr('stroke-width', 2);
+	    .attr('stroke-width', 2)
+  ;
 
 	// provides the bg color at the bottom of the pattern
   svg
@@ -305,7 +401,8 @@ function drawReferenceGenome(){
 			.attr('height', trackHeight)
 			.attr('trackID', 'reference-genome')
 			.attr('color', '#424242')
-		.style('fill', '#424242');
+		.style('fill', '#424242')
+	;
 
 	// the reference genome line
 	svg
@@ -320,11 +417,23 @@ function drawReferenceGenome(){
 			.attr('color', '#424242')
 		.style('fill', '#424242')
 		.on('mouseover', trackMouseOver)
-    .on('mouseout', trackMouseOut);
+    .on('mouseout', trackMouseOut)
+  ;
 }
 
 	// highlight effect on hover [D3] @ drawReferenceGenome()
 	function trackMouseOver(){
+		if(this.attributes.color.value == '#82131b'){
+			var wew = [];
+			wew = $('.sv-inv-arrowhead')
+			for (var i = 0; i < wew.length; i++) {
+				if(wew[i].attributes.start.value == this.attributes.start.value){
+					$('.sv-inv-arrowhead')[i].attributes.fill = 'url(#diagonalHatch)';
+				}
+			}
+			// console.log(wew);
+		}
+
 	  d3.select(this).style('fill', 'url(#diagonalHatch)');
 	}
 
@@ -338,7 +447,7 @@ function drawReferenceGenome(){
 		$('#sv-label').removeClass('teal', 'blue', 'violet', 'purple');
 	}
 
-	// @ drawReferenceGenome()
+	// shows the popup on del/inv/dup track click @ drawReferenceGenome()
 	function trackClick(){
 		let startChr = Number($('#chr-start').val()),
 				endChr = Number($('#chr-end').val()),
@@ -348,7 +457,7 @@ function drawReferenceGenome(){
 
 		// make popup appear
 		x = isSidebarOpen ? event.clientX - 380 : event.clientX - 120;
-		y = event.clientY - 105;
+		y = event.clientY - 55;
 		$('#popup-element').attr('x', x);
 		$('#popup-element').attr('y', y);
 
@@ -358,10 +467,42 @@ function drawReferenceGenome(){
 		$('#sv-label-start-detail').text($(this).attr('start') + ' bp');
 		$('#sv-label-end-detail').text($(this).attr('end') + ' bp');
 		$('#sv-label-cluster-detail').text($(this).attr('cluster'));
-		$('#sv-label-detail-detail').text($(this).attr('detail'));
+		$('#sv-label-sampleID-detail').text($(this).attr('sampleID'));
 	}
 
-function assignHotspotNumber(){
+	// shows the modal on ins marker click @ drawReference()
+	function markerClick(){
+		$('.sequence-delete').remove();
+
+		$('.modal').modal('show');
+
+		let startChr = Number($('#chr-start').val()),
+				endChr = Number($('#chr-end').val()),
+				chrNum = Number($('#chr-num-select').val()),
+				svType = $('input[name=sv-type]:checked').val(),
+				color = svToText(0),
+				insertedSeq = $(this).attr('insertedSeq').split(/,/g);
+
+		$('#sv-modal').addClass(color);
+		$('#sv-modal-detail').text(svType);
+		$('#sv-modal-chr-detail').text(chrNum);
+		$('#sv-modal-start-detail').text($(this).attr('start') + ' bp');
+		$('#sv-modal-end-detail').text($(this).attr('end') + ' bp');
+		$('#sv-modal-cluster-detail').text($(this).attr('cluster'));
+		$('#sv-modal-sampleID-detail').text($(this).attr('sampleID'));
+
+		for(let i = 0; i < insertedSeq.length; i++){
+			if(insertedSeq[i] != ''){
+				$('#sv-modal-insertedSeq-detail').append('<p class="sequence-delete">' + insertedSeq[i] + '<p/>');
+			}
+		}
+	}
+
+// determine the number of branches to be visualized; works for del, dup, inv
+function assignHotspotNumber(type){
+	let svBranchHeight = 0;
+	hotspotFrequency = {};
+
 	// iterate through the sv's then
 		// hotspot 1. grp of overlapping intervals 2. magsolo, walang kapatong
 		// hotspot == key na lang sa svToDraw, integer starting from 1
@@ -376,24 +517,40 @@ function assignHotspotNumber(){
 	// use the same set of rules para makabilang yung isang interval sa hotspot
 	let minBound = svToDraw[0]['start'],
 			maxBound = svToDraw[0]['end'],
-			hotspotCount = 0,
-			svBranchHeight = 0;
+			hotspotCount = 0;
 
 	svToDraw[0]['hotspot'] = hotspotCount;
 	svToDraw[0]['hotspotIndex'] = 0;
 	hotspotFrequency[hotspotCount] = 1 + (hotspotFrequency[hotspotCount] || 0);
 	svBranchHeight = hotspotFrequency[hotspotCount];
 
+	// console.log('start:' + svToDraw[0]['start'] + ' end:' + svToDraw[0]['end'] + ' stackNo:' + svToDraw[0]['hotspot'] + ' index:' + svToDraw[0]['hotspotIndex']);
 	for(var i = 1; i < svToDraw.length; i++){
 		let nextSV = svToDraw[i];
 
-		if(nextSV['start'] > maxBound){
-			hotspotCount++;
+		if(type != 'INS'){
+			if(nextSV['start'] > maxBound){
+				hotspotCount++;
+			}
 		}
-	
-		if(nextSV['end'] >= maxBound || maxBound == nextSV['start'] || nextSV['start'] >= minBound || nextSV['end'] <= maxBound){
-			maxBound = nextSV['end'];
+		else{
+			if(nextSV['start'] != minBound && nextSV['end'] != maxBound){
+				minBound = nextSV['start'];
+				maxBound = nextSV['end'];
+				hotspotCount++;
+			}
+		}
+
+		if(type != 'INS'){
+			if(nextSV['end'] >= maxBound || maxBound == nextSV['start'] || nextSV['start'] >= minBound ){
+				maxBound = nextSV['end'];
 				svToDraw[i]['hotspot'] = hotspotCount;
+			}
+		}
+		else{
+			if(nextSV['end'] == maxBound || nextSV['start'] == minBound ){
+				svToDraw[i]['hotspot'] = hotspotCount;
+			}				
 		}
 
 		svToDraw[i]['hotspotIndex'] = (hotspotFrequency[hotspotCount] == null) ? 0 : hotspotFrequency[hotspotCount];
@@ -401,9 +558,10 @@ function assignHotspotNumber(){
 		if(svBranchHeight < hotspotFrequency[hotspotCount]){
 			svBranchHeight = hotspotFrequency[hotspotCount];
 		}
+
+		// console.log('start:' + svToDraw[i]['start'] + ' end:' + svToDraw[i]['end'] + ' stackNo:' + svToDraw[i]['hotspot'] + ' index:' + svToDraw[i]['hotspotIndex']);
 	}
 
-	console.log(svToDraw);
 	return svBranchHeight;
 }
 
@@ -411,17 +569,28 @@ function assignHotspotNumber(){
 function drawStructuralVariants(){
 	let svType = $('input[name=sv-type]:checked').val(),
 			svClusters = Object.keys(svFrequency[svType]).length,
-			refToSVSpace = 75, // in px
+			refToSVSpace = 50, // in px
 			bodyBGColor = $('.pusher').css('backgroundColor'),
-			noOfmaxBranches = assignHotspotNumber(),
+			noOfmaxBranches = assignHotspotNumber(svType),
 			rowsSVG = (noOfmaxBranches % 2) != 0 ? noOfmaxBranches - 1 : noOfmaxBranches, 
 			flank = bpToPx(flankingValue),
-			rightAllowance = bpToPx(10),
-			wew = 0;
+			rightAllowance = bpToPx(10);
 
 	rowsSVG = (trackHeight) * rowsSVG;
 
 	// provides the bg color at the bottom of the pattern
+	svg
+		.append('g')
+			.attr('class', 'sv-merged-line')
+		.append('rect')
+			.attr('x', 0)
+			.attr('y', svgTopMargin + refToSVSpace + rowsSVG)
+			.attr('width', maxChrBound + svgLeftMargin + (flank * 2) + rightAllowance)
+			.attr('height', trackHeight)
+			.attr('color', '#ab1a25')
+		.style('fill', '#ab1a25')
+	;
+
 	// draws the merged and continuous sv line
 	svg
 		.append('g')
@@ -431,265 +600,225 @@ function drawStructuralVariants(){
 			.attr('y', svgTopMargin + refToSVSpace + rowsSVG)
 			.attr('width', maxChrBound + svgLeftMargin + (flank * 2) + rightAllowance)
 			.attr('height', trackHeight)
-			.attr('trackID', 'reference-genome')
+			.attr('class', 'sample-genome')
 			.attr('color', '#ab1a25')
-		.style('fill', '#ab1a25')
-	;
+		.style('fill', '#ab1a25');
+		
+	if(svType != 'INS'){
+		// determines the y position of the 
+	  function locateYCoordinate(array){
+	  	let index = array[0],
+	  			maxCount = hotspotFrequency[array[1]],
+			  	count = 0,
+			  	flank = bpToPx(flankingValue), 
+			  	x = bpToPx(array[3]) + 150,
+			  	y = 0,
+			  	trackIntervalHeight = 5,
+			  	trackToMergedLine = 50
+			;
 
-  function locateYCoordinate(array){
-  	let index = array[0],
-  			maxCount = hotspotFrequency[array[1]],
-		  	count = 0,
-		  	flank = bpToPx(flankingValue), 
-		  	x = bpToPx(array[3]) + 150,
-		  	y = 0;
-		  	// shearAngle = ((maxCount / 2) > index) ? -20 : 20;
-		  	// startCoordinateAdjustmentX = ((maxCount / 2) > index) ? 26 : 24,
-		  	// startCoordinateAdjustmentY = ((maxCount / 2) > index) ? 26 : -12,
-		  	// endAngle = ((maxCount / 2) > index) ? 60 : -60;
+	  	if(maxCount == 1){
+	  		// for single-itemed hotspot
+		  	return svgTopMargin + rowsSVG + array[2];
+	  	}
+	  	else{
+	  		// for multiple-itemed hotspot
+	  		maxCount = maxCount - 1;
+		  	count = Math.abs(index - maxCount) - (Math.floor(maxCount / 2));
+		  	// count = ((maxCount + 1) % 2 == 0) ? count + 1 : count; // to handle even number of hotspots, aligning to merged sv line
+		  	// console.log(count);
+		  	count = (count < 0) ? Math.abs(count) + Math.floor(maxCount / 2) + 1 : count;
+	  	}
+	  	y = svgTopMargin + trackToMergedLine + (Math.abs(count) * ((trackHeight) + trackIntervalHeight));
 
-  	if(maxCount == 1){
-  		// for single-itemed hotspot
-	  	return svgTopMargin + 75 + array[2];
-  	}
-  	else{
-  		// for multiple-itemed hotspot
-  		maxCount = maxCount - 1;
-	  	count = Math.abs(index - maxCount) - (Math.floor(maxCount / 2));
-	  	count = ((maxCount + 1) % 2 == 0) ? count - 1 : count; // to handle even number of hotspots, aligning to merged sv line
-	  	count = (count < 0) ? Math.abs(count) + Math.floor(maxCount / 2) : count;
-  	}
-  	y = svgTopMargin + 75 + (Math.abs(count) * ((trackHeight) + 15));
+	  	return y;
+	  }
 
-  	// console.log(index +"index - y"+y+'x'+x);
+	  // forms the vertices of the DEL/DUP/INV track (rectangle on branch) @ svg.polyline.sv-branch
+	  function formVertices(d){  	
+			let string = '',
+					yFactor = 2.5
+					base = svgTopMargin + refToSVSpace + rowsSVG + yFactor,
+					y = locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + yFactor,
+					xStart = bpToPx(d['start']) + bpToPx(flankingValue) - 50,
+					xEnd = xStart + bpToPx(d['length']) + bpToPx(flankingValue) - 50,
+					offset = 10 + ((d['hotspotIndex'] - 1) * 9);
 
-  	// if(level sa branch){
-  	// 	wew = x + 68;
-  	// }
-  	// if((maxCount / 2) >= index && index != 0){
-	  // 	wew = (index == 1) ? x + 68 : wew - 30;
-  	// }
-  	// console.log(wew);
+			// makes the branching angle of each branches equal no matter the y position
+	  	if(d['hotspotIndex'] > (hotspotFrequency[d['hotspot']]/2)){
+	  		let indexFix = (d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2);
+				offset = 10 + ((indexFix - 1) * 9);
+	  	}
 
-  	// if(y != (svgTopMargin + refToSVSpace + rowsSVG)){
-			// svg
-			// 	.append('g')
-			// 		.attr('class', 'sv-merged-line')
-			// 	.append('rect')
-			// 		.attr('x', wew)
-			// 		.attr('y', y)
-			// 		.attr('width', trackHeight)
-			// 		.attr('height', (15*((index*2))))
-			// 		.attr('trackID', 'reference-genome')
-			// 		.attr('transform', 'skewX('+shearAngle+')')
-			// 		.attr('color', '#ab1a25')
-			// 	.style('fill', '#ab1a25');
+			if(d['hotspotIndex'] != 0){
+				string = (xStart - offset) + ',' + base + ' ';
+				string = string + xStart + ',' + y + ' ';
+				string = string + xEnd + ',' + y + ' ';
+				string = string + (xEnd + offset) + ',' + base + ' ';
+				return string;
+			}
+	  }
 
-			// svg
-			// 	.append('g')
-			// 		.attr('class', 'sv-merged-line')
-			// 	.append('rect')
-			// 		.attr('x', span)
-			// 		.attr('y', y)
-			// 		.attr('width', trackHeight)
-			// 		.attr('height', (15*((index*2))))
-			// 		.attr('trackID', 'reference-genome')
-			// 		.attr('transform', 'skewX('+(-shearAngle)+')')
-			// 		.attr('color', '#ab1a25')
-			// 	.style('fill', '#ab1a25');
-  	// }
+		svg
+			.selectAll('sv-branch')		
+			.data(svToDraw)
+				.enter()
+			.append('polyline')
+				.attr('points', function(d){ return formVertices(d) })
+				.attr('color', '#ab1a25')
+			.style('fill', 'none')
+			.style('stroke', '#ab1a25')
+			.style('stroke-width', trackHeight)
+	  ;
 
-  	return y;
-  }
+		svg
+			.selectAll('sv-branch')		
+			.data(svToDraw)
+				.enter()
+			.append('polyline')
+				.attr('points', function(d){ return formVertices(d) })
+				.attr('color', '#ab1a25')
+			.style('fill', 'none')
+			.style('stroke', '#ab1a25')
+			.style('stroke-width', trackHeight)
+			.on('mouseover', refMouseOver)
+	    .on('mouseout', refMouseOut)
+	  ;
 
-  function isUpperOrLower(d, type, caseNumber){
-  	let isUpper = d['hotspotIndex'] > (hotspotFrequency[d['hotspot']]/2);
-  	if(d['hotspotIndex'] == 0){
-  		return null;
-  	}
+	  // changes color of track color when svtype = dup | inv
+	  switch(svType){
+	  	case 'DUP':
+	  		bodyBGColor = '#480b0f';
+	  		break;
+	  	case 'INV':
+	  		bodyBGColor = '#480b0f';
+				
+				// arrowhead upward
+				svg
+					.selectAll('sv-inv-arrowhead')		
+					.data(svToDraw)
+						.enter()
+					.append('line')
+						.attr('x1', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) } )
+						.attr('x2', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) + 8 } )
+						.attr('y1', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + 2 } )
+						.attr('y2', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) - 4 } )
+						.attr('color', bodyBGColor)
+						.attr('start', function(d) { return d['start'] })
+						.attr('end', function(d) { return d['end'] })
+						.attr('cluster', function(d) { return d['cluster'] })
+						.attr('sampleID', function(d) { return d['sampleID'] })
+						.attr('class', 'sv-inv-arrowhead')
+					.style('fill', 'none')
+					.style('stroke', bodyBGColor)
+					.style('stroke-width', 2)
+			  ;
 
-  	switch(type){
-  		case 'span':
-		  	switch(caseNumber){
-		  		case 1:
-						if(isUpper){
-				  		// return 0 + svgLeftMargin + flank + bpToPx(d['start']) - 150;
-						}
-			  		return 0 + svgLeftMargin + flank + bpToPx(d['start']) - 45;
-			  		break;
-		  		case 2:
-						if(isUpper){
-				  		// return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) - (15 * (((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2)) * 2)) + 15;
-						}
-			  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]);
-		  		case 3:
-						if(isUpper){
-							// return (trackHeight) * ((((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2))*2));
-						}
-						return bpToPx(d['length']) + 105;
-		  			break;
-		  		// case 4:
-				  // 	if(isUpper){
-				  // 		return 'skewX(20)';
-				  // 	}
-						// return 'skewX(-20)';
-		  		// 	break;
-		  	}
-		  	break;
+			  // arrowhead downward
+				svg
+					.selectAll('sv-inv-arrowhead')		
+					.data(svToDraw)
+						.enter()
+					.append('line')
+						.attr('x1', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) } )
+						.attr('x2', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) + 8 } )
+						.attr('y1', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + 2 } )
+						.attr('y2', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + 8 } )
+						.attr('color', bodyBGColor)
+						.attr('start', function(d) { return d['start'] })
+						.attr('end', function(d) { return d['end'] })
+						.attr('cluster', function(d) { return d['cluster'] })
+						.attr('sampleID', function(d) { return d['sampleID'] })
+						.attr('class', 'sv-inv-arrowhead')
+					.style('fill', 'none')
+					.style('stroke', bodyBGColor)
+					.style('stroke-width', 2)
+			  ;
 
-		  case 'out':
-				switch(caseNumber){
-		  		case 1:
-						if(isUpper){
-				  		return 0 + svgLeftMargin + flank + bpToPx(d['start']) - 150;
-						}
-			  		return 0 + svgLeftMargin + flank + bpToPx(d['start']);
-			  		break;
-		  		case 2:
-						if(isUpper){
-				  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) - (15 * (((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2)) * 2)) + 15;
-						}
-			  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]);
-		  		case 3:
-						if(isUpper){
-							return (trackHeight) * ((((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2))*2));
-						}
-						return (trackHeight) * ((d['hotspotIndex']*2) );
-		  			break;
-		  		case 4:
-				  	if(isUpper){
-				  		return 'skewX(20)';
-				  	}
-						return 'skewX(-20)';
-		  			break;
-		  	}
-		  	break;
+	  		break;
+	  }
 
-		  case 'in':
-			  switch(caseNumber){
-		  		case 1:
-						if(isUpper){
-				  		return 0 + svgLeftMargin + flank + bpToPx(d['end']) + 150;
-						}
-			  		return 0 + svgLeftMargin + flank + bpToPx(d['end']);
-			  		break;
-		  		case 2:
-						if(isUpper){
-				  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['end']]) - (30 * (((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2)) )) + 15;
-						}
-			  		return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['end']]);
-		  		case 3:
-						if(isUpper){
-							return (trackHeight) * ((((d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2))*2));
-						}
-						return (trackHeight) * ((d['hotspotIndex']*2) );
-		  			break;
-		  		case 4:
-				  	if(isUpper){
-							return 'skewX(-20)';
-				  	}
-			  		return 'skewX(20)';
-		  			break;
-		  	}
-		  	break;
-  	}
-  }
+		// highlight the range of the given sv 
+		svg
+			.selectAll('sv-sample')		
+			.data(svToDraw)
+				.enter()
+			.append('rect')
+				.attr('x', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) } )
+				.attr('y', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']])} )
+				.attr('width', function(d) { return bpToPx(d['length']) } )
+				.attr('height', trackHeight)
+				.attr('color', bodyBGColor)
+				.attr('start', function(d) { return d['start'] })
+				.attr('end', function(d) { return d['end'] })
+				.attr('cluster', function(d) { return d['cluster'] })
+				.attr('sampleID', function(d) { return d['sampleID'] })
+			.style('fill', bodyBGColor)
+			.on('mouseover', trackMouseOver)
+	    .on('mouseout', trackMouseOut)
+	    .on('click', trackClick)
+	  ;
+	}
+	else{
+		// forms the vertices of the INS marker (pentagon pointing downwards) @ svg.polgon.sv-stack
+	  function formVertices(d){  	
+			let string = '',
+					base = svgTopMargin + refToSVSpace + rowsSVG - 10,
+					y = base - (d['hotspotIndex'] * 10),
+					markerHeight = y + 5,
+					xStart = bpToPx(d['start']) + bpToPx(flankingValue) + svgLeftMargin,
+					xEnd = bpToPx(d['end']) + bpToPx(flankingValue) + svgLeftMargin;
 
-  function formVertices(d){  	
-  	console.log(d);
-		let string = '',
-				base = svgTopMargin + refToSVSpace + rowsSVG + 7.5,
-				y = locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + 7.5,
-				xStart = bpToPx(d['start']) + 100,
-				xEnd = xStart + bpToPx(d['length']) + 100,
-				offset = 10 + ((d['hotspotIndex'] - 1) * 9);
+				string = xStart + ',' + markerHeight + ' ';
+				string = string + xStart + ',' + y + ' ';
+				string = string + xEnd + ',' + y + ' ';
+				string = string + xEnd + ',' + markerHeight + ' ';
+				string = string + ((xStart + xEnd) / 2) + ',' + (markerHeight+5) + ' ';
 
-  	if(d['hotspotIndex'] > (hotspotFrequency[d['hotspot']]/2)){
-  		let indexFix = (d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2);
-			offset = 10 + ((indexFix - 1) * 9);
-  	}
+				return string;
+	  }
 
-		if(d['hotspotIndex'] != 0){
-			string = (xStart - offset) + ',' + base + ' ';
-			string = string + xStart + ',' + y + ' ';
-			string = string + xEnd + ',' + y + ' ';
-			string = string + (xEnd + offset) + ',' + base + ' ';
+		svg
+			.selectAll('sv-stack')		
+			.data(svToDraw)
+				.enter()
+			.append('polygon')
+				.attr('points', function(d){ return formVertices(d) } )
+				.attr('color', 'black')
+			.style('fill', 'black')
+	  ;
 
-			return string;
-		}
+		svg
+			.selectAll('sv-stack')		
+			.data(svToDraw)
+				.enter()
+			.append('polygon')
+				.attr('points', function(d){ return formVertices(d) } )
+				.attr('start', function(d) { return d['start'] })
+				.attr('end', function(d) { return d['end'] })
+				.attr('cluster', function(d) { return d['cluster'] })
+				.attr('sampleID', function(d) { return d['sampleID'] })
+				.attr('insertedSeq', function(d) { return d['insertedSeq'] })
+				.attr('color', '#ab1a25')
+			.style('fill', '#ab1a25')
+			.on('mouseover', trackMouseOver)
+	    .on('mouseout', trackMouseOut)
+	    .on('click', markerClick)
+	  ;	
+	}
+}
 
-  }
+function refMouseOver(){
+  d3.select(this).style('stroke', 'url(#diagonalHatch)');
+  $('.sample-genome').css('fill', 'url(#diagonalHatch)');
+}
 
-	svg
-		.selectAll('sv-branch')		
-		.data(svToDraw)
-			.enter()
-		.append('polygon')
-			.attr('points', function(d){ return formVertices(d) })
-		.style('fill', 'none')
-		.style('stroke', '#ab1a25')
-		.style('stroke-width', trackHeight)
-  ;
-
-	// svg
-	// 	.selectAll('sv-branch-out')		
-	// 	.data(svToDraw)
-	// 		.enter()
-	// 	.append('rect')
-	// 		.attr('x', function(d){ return isUpperOrLower(d, 'out', 1) })
-	// 		.attr('y', function(d){ return isUpperOrLower(d, 'out', 2) })
-	// 		.attr('width', trackHeight)
-	// 		.attr('height', function(d){ return isUpperOrLower(d, 'out', 3) })
-	// 		.attr('transform', function(d){ return isUpperOrLower(d, 'out', 4) })
-	// 		.attr('color', '#ab1a25')
-	// 	.style('fill', '#ab1a25');
-
-	// svg
-	// 	.selectAll('sv-branch-in')		
-	// 	.data(svToDraw)
-	// 		.enter()
-	// 	.append('rect')
-	// 		.attr('x', function(d){ return isUpperOrLower(d, 'in', 1) })
-	// 		.attr('y', function(d){ return isUpperOrLower(d, 'in', 2) })
-	// 		.attr('width', trackHeight)
-	// 		.attr('height', function(d){ return isUpperOrLower(d, 'in', 3) })
-	// 		.attr('transform', function(d){ return isUpperOrLower(d, 'in', 4) })
-	// 		.attr('color', '#ab1a25')
-	// 	.style('fill', '#ab1a25');
-
- //  svg
-	// 	.selectAll('sv-branch-span')		
-	// 	.data(svToDraw)
-	// 		.enter()
-	// 	.append('rect')
-	// 		.attr('x', function(d){ return isUpperOrLower(d, 'span', 1) })
-	// 		.attr('y', function(d){ return isUpperOrLower(d, 'span', 2) })
-	// 		.attr('width', function(d){ return isUpperOrLower(d, 'span', 3)} )
-	// 		.attr('height', trackHeight )
-	// 		// .attr('transform', function(d){ return isUpperOrLower(d, 'span', 4) })
-	// 		.attr('color', '#ab1a25')
-	// 	.style('fill', '#ab1a25');
-	
-	// highlight the range of the given sv 
-	svg
-		.selectAll('sv-sample')		
-		.data(svToDraw)
-			.enter()
-		.append('rect')
-			.attr('x', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) } )
-			.attr('y', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']])} )
-			.attr('width', function(d) { return bpToPx(d['length']) } )
-			.attr('height', trackHeight)
-			.attr('color', 'red')
-			.attr('start', function(d) { return d['start'] })
-			.attr('end', function(d) { return d['end'] })
-			.attr('cluster', function(d) { return d['cluster'] })
-			.attr('detail', function(d) { return d['detail'] })
-		.style('fill', 'red')
-		.on('mouseover', trackMouseOver)
-    .on('mouseout', trackMouseOut)
-    .on('click', trackClick)
-  ;
+// returns the previous color of the highlighted track [D3] @ drawReferenceGenome()
+function refMouseOut(){
+  let color = d3.select(this).attr('color');
+  d3.select(this).style('stroke', color);
+  color = $('.sample-genome').attr('color');
+  $('.sample-genome').css('fill', color);
 }
 
 // enables pan and zoom for the whole SVG [jQuery plugin] @ renderVisualization()
@@ -756,6 +885,11 @@ function bpToPx(bp){
 	return bp * 7;
 }
 
+// converts base pair to px
+function pxToBp(px){
+	return px / 7;
+}
+
 // event listeners for html elements [jQuery] @ initialize()
 function initializeActionListeners(){
 	// reloads the visualization on chr change
@@ -766,36 +900,59 @@ function initializeActionListeners(){
 		$('#max-count').text(currentChr.len);
 	});
 
+	// sets the max and min even the user specifies out of boundaries
+	$('#ruler-interval').on('focusout', function(){
+		let interval = Number($('#ruler-interval').val());
+		if(interval < minInterval){
+			$('#ruler-interval').val(minInterval);
+		}
+		else if(interval > maxInterval){
+			$('#ruler-interval').val(maxInterval);
+		}
+	});
+
+	$('#ruler-flank').on('focusout', function(){
+		let flank = Number($('#ruler-flank').val());
+		if(flank < minFlank){
+			$('#ruler-flank').val(minFlank);
+		}
+		else if(flank > maxFlank){
+			$('#ruler-flank').val(maxFlank);
+		}
+	});
+
+	$('#chr-start').on('focusout', function(){
+		let chrStart = Number($('#chr-start').val());
+		if(chrStart < 1){
+			$('#chr-start').val(1);
+		}
+	});
+
+	$('#chr-end').on('focusout', function(){
+		let chrEnd = Number($('#chr-end').val()),
+				maxBound = Number($('#max-count').text());
+		if(chrEnd > maxBound){
+			$('#chr-end').val(maxBound);
+		}
+	});
+
 	// toggles the sequence text
 	$('#toggle-seq-text').on('change', function(){
-		svg.selectAll('.sequence-text').remove(); // removes the sequence text
-
-		let chrNum = Number($('#chr-num-select option:selected').val()) - 1,
-				currentChr = referenceGenome[chrNum],
-				chrSequence = currentChr.seq.toUpperCase();
-
 		if($('#toggle-seq-text').is(':checked') === true){
 			showSequence = false;
 		}
 		else{
 			showSequence = true;	
 		}
-
-		addSequenceText(setSequenceRange(chrSequence, false));
-	});
-
-	$('#ruler-interval').on('change', function(){
-		svg.selectAll('.ruler').remove(); // removes the whole ruler
-		drawRuler();
 	});
 
 	$('#left-sidebar-toggle').on('click', function(){
 		isSidebarOpen = !isSidebarOpen;
 		if(isSidebarOpen){
-			$('#svg-holder').css('width', '78%');  // TODO: responsive width
+			$('#svg-holder').css('width', '95%');  // TODO: responsive width
 		}
 		else{
-			$('#svg-holder').css('width', '98%'); 
+			$('#svg-holder').css('width', '100%'); 
 		}
 	});
 
@@ -822,9 +979,14 @@ function initializeActionListeners(){
 // initializes the set coordinates event listener on the button after reading the data @ readTextFile()
 function initializeSetCoordinates(){
 	$('#min-range').text(minimumRange);
+	$('#max-range').text(maximumRange);
+	$('#min-interval').text(minInterval);
+	$('#max-interval').text(maxInterval);
+	$('#min-flank').text(minFlank);
+	$('#max-flank').text(maxFlank);
 
 	$('#chr-coordinates').click(function(){
-		$('#svg-holder').css('width', '78%'); // adjusts the svg view at start // TODO: responsive width
+		$('#svg-holder').css('width', '95%'); // adjusts the svg view at start // TODO: responsive width
 
 		let startChr = Number($('#chr-start').val()) - 1,
 				endChr = Number($('#chr-end').val()) - 1,
@@ -897,7 +1059,6 @@ function initializeSetCoordinates(){
 
 			return false;
 		}	
-
 		return true;
 	}
 
@@ -928,7 +1089,8 @@ function svToText(index){
 			names = [
 				['teal', 'blue', 'violet', 'purple'],
 				['deletions', 'inversions', 'duplications', 'insertions'],
-			];
+			]
+	;
 
 	switch(svType){
     case 'DEL':
@@ -954,10 +1116,21 @@ function svToText(index){
 function changeHTMLDOM(){	
 	// set the initial ruler interval to 20
 	$('#ruler-interval').attr('value', '20');
+	$('#ruler-interval').attr('min', minInterval);
+	$('#ruler-interval').attr('max', maxInterval);
+	$('#ruler-interval').attr('step', '10');
+
+	// set the initial ruler flank to 20
+	$('#ruler-flank').attr('value', '30');
+	$('#ruler-flank').attr('min', minFlank);
+	$('#ruler-flank').attr('max', maxFlank);
+	$('#ruler-flank').attr('step', '10');
 
 	// set the attributes of the svg
 	$('#sv-visualization').attr('height', '500px');
 	$('#sv-visualization').attr('width', '100%');
+
+	$('#query-details').css({'-webkit-transform':'translate(-500px, 0px)'});
 }
 
 // semantic element initializations and enabling [jQuery] @ initialize()
@@ -974,11 +1147,13 @@ function setupSemantic(){
 	// makes the option at the sidebar disappear on sidebar close
 	$('#left-sidebar-toggle').on('click', function(){
 		if(showOptions){
-			$('#return-options').css({'-webkit-transform':'translate(0px, -330px)'}); // 65px:1block 5px:menu
+			$('#return-options').css({'-webkit-transform':'translate(0px, -329px)','transition':'transform 0.5s ease'}); // 65px:1block 5px:menu
+			$('#query-details').css({'-webkit-transform':'translate(100px, 0px)','transition':'transform 0.5s ease'});
 			$('#option-toggle').addClass('sidebar').removeClass('window close').transition({animation: 'flash', duration: '0.4s'});
 		}
 		else{
-			$('#return-options').css({'-webkit-transform':'translate(0px, 0px)'});
+			$('#return-options').css({'-webkit-transform':'translate(0px, 0px)','transition':'transform 0.5s ease'});
+			$('#query-details').css({'-webkit-transform':'translate(-500px, 0px)','transition':'transform 0.5s ease'});
 			$('#option-toggle').addClass('window close').removeClass('sidebar').transition({animation: 'flash', duration: '0.4s'});
 		}
 		showOptions = !showOptions;
@@ -994,9 +1169,7 @@ function setupSemantic(){
 
 	$('#chr-start').val(1);
 	$('#chr-end').val(100);
-	$('#DEL').prop('checked', true); 
-
-
+	$('#INV').prop('checked', true); 
 
 }
 
