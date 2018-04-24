@@ -15,7 +15,13 @@
     <script src="js/jquery-3.2.1.min.js"></script>
 
     <!-- jQuery plugins -->
-    <script src="js/plugins/svg-pan-zoom.min.js"></script>
+    <script src="js/plugins/svg-pan-zoom.min.js"></script> <!-- zoom -->
+    <script src="js/plugins/jquery.jsontotable.js"></script> <!-- json to table -->
+    <script src="js/plugins/FileSaver.min.js"></script> <!-- file -->
+    <script src="js/plugins/tableexport.min.js"></script> <!-- json to csv & tsv -->
+
+    <!-- exporting js -->
+    <script src="js/saveSvgAsPng.js"></script>
 
     <!-- semantic ui files -->
     <link rel="stylesheet" href="css/semantic.min.css">
@@ -26,7 +32,6 @@
   </head>
 
   <body>
-
     <div class="ui left vertical sidebar menu visible night-mode">
       <div class="item">
         <h1>sv-visualization</h1>
@@ -85,7 +90,7 @@
         <div class="item"> <!-- sv type -->
           <div class="ui sub header night-mode">Structural variant type:</div>
           <div class="ui form night-mode">
-            <div class="grouped fields">
+            <div class="grouped fields" id="sv-checkboxes">
               <div class="field">
                 <div class="ui checkbox">
                   <input type="checkbox" name="sv-type" value="INS" id="INS">
@@ -188,30 +193,100 @@
 
     <div class="pusher">
       <div class="sv-container">
-        <div class="ui compact labeled icon menu" id="query-details">
-          <div class="item">
-            <i class="info circle icon"></i>
-            Parameters
-          </div>
-          <div class="item adjust-item">
-            <div class="ui tiny horizontal statistic">
-              <div class="value" id="submenu-chr"></div>
-              <div class="label">Chr no.</div>
+        <div class="ui grid">
+          <div class="row remove-padding-bottom">
+            <div class="ui compact icon labeled menu" id="query-details">
+              <div class="item">
+                <i class="info circle icon"></i>
+                Details
+              </div>
+              <div class="item adjust-item-down">
+                <div class="ui mini vertical statistic">
+                  <div class="value" id="submenu-chr"></div>
+                  <div class="label mini">Chr no.</div>
+                </div>
+              </div>
+              <div class="item adjust-item-down">
+                <div class="ui mini vertical statistic">
+                  <div class="value">
+                    <span id="submenu-start"></span> - 
+                    <span id="submenu-end"></span>
+                  </div>
+                  <div class="label mini">Range</div>
+                </div>
+              </div>
+              <div class="item">
+                <i class="wrench icon"></i>
+                Tools
+              </div>
+              <a class="item" id="zoom-toggle">
+                <i class="zoom icon" id="zoom-icon"></i>
+                Zoom
+              </a>
+              <a class="item" id="pan-toggle">
+                <i class="hand pointer icon" id="pan-icon"></i>
+                Pan
+              </a>
+              <a class="item" id="brush-toggle">
+                <i class="paint brush icon" id="brush-icon"></i>
+                Brush
+              </a>
+              <a class="item" id="screenshot">
+                <i class="download icon"></i>
+                Export
+              </a>
+            </div>
+          </div>  
+          <div class="row remove-padding-top remove-padding-bottom" id="zoom-tools">
+            <div class="ui compact icon menu">
+              <a class="item" id="zoom-in-toggle">
+                <i class="zoom in icon"></i>
+              </a>
+              <a class="item" id="zoom-out-toggle">
+                <i class="zoom out icon"></i>
+              </a>
+              <a class="item" id="reset-toggle">
+                <i class="refresh icon"></i>
+              </a>
+              <a class="item" id="fit-toggle">
+                <i class="expand icon"></i>
+              </a>
             </div>
           </div>
-          <div class="item adjust-item">
-            <div class="ui tiny horizontal statistic">
-              <div class="value" id="submenu-start"></div>
-              <div class="label">Start</div>
+          <div class="row remove-padding-top remove-padding-bottom" id="brush-tools">
+            <div class="ui compact icon menu">
+              <a class="item" id="brush-options-toggle">
+                <i class="options icon"></i>
+              </a>
+              <div class="ui popup flowing transition hidden"  id="expand-brush-options">
+                <div class="ui aligned grid">
+                  <div class="column">
+                    <div class="ui labeled fluid input">
+                      <div class="ui label">Start</div>
+                      <input type="number" id="brush-start" min="1" name="brush-start" placeholder="in base pairs">
+                    </div><br>
+                    <div class="ui labeled fluid input">
+                      <div class="ui label">End</div>
+                      <input type="number" id="brush-end" min="1" name="brush-start" placeholder="in base pairs">
+                    </div><br>  
+                    <p>
+                      Adjust brush
+                      <button class="ui right floated button night-mode" id="brush-adjust">Go!</button>
+                    </p>
+                    <div class="ui negative message mini transition hidden" id="dismissible-error-range">
+                      <i class="close icon"></i>
+                      <div class="header">Failed to query.</div>
+                      <span id="range-message"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <a class="item" id="show-table-toggle">
+                <i class="table icon"></i>
+              </a>
             </div>
           </div>
-          <div class="item adjust-item">
-            <div class="ui tiny horizontal statistic">
-              <div class="value" id="submenu-end"></div>
-              <div class="label">End</div>
-            </div>
-          </div>
-        </div>
+        </div>      
 
         <div class="ui menu labeled icon vertical fixed night-mode" id="return-options">
           <div class="header item">
@@ -236,33 +311,15 @@
           <a class="icon item" id="left-sidebar-toggle">
             <i class="window close icon" id="option-toggle"></i>
             Options
-          </a>
-            
+          </a>            
         </div>
 
         <div id="sv-visualization-area">
-
-          <!-- visualization options:
-          <button id="reset-svg">Reset</button>
-          <button id="toggle-zoom-svg">Zoom enabled</button>
-          <button id="zoom-in-svg">+</button>
-          <button id="zoom-out-svg">-</button>
-          <button id="toggle-pan-svg">Pan enabled</button> -->
-
           <br>
           <div id="svg-holder">
             <div class="ui grid">
               <div class="sixteen wide column">
-                <svg id="sv-visualization-ins"></svg>
-              </div>
-              <div class="sixteen wide column">
-                <svg id="sv-visualization-del"></svg>
-              </div>
-              <div class="sixteen wide column">
-                <svg id="sv-visualization-inv"></svg>
-              </div>
-              <div class="sixteen wide column">
-                <svg id="sv-visualization-dup"></svg>
+                <svg id="sv-visualization"></svg>
               </div>
             </div>
           </div>      
@@ -270,7 +327,7 @@
       </div>
     </div>
 
-    <div class="ui modal tiny basic">
+    <div class="ui modal tiny basic" id="sv-ins-details">
       <i class="close icon"></i>
       <div class="ui list">
         <div class="item">
@@ -325,6 +382,11 @@
       </div>
     </div>
     
+    <div class="ui modal tiny basic" id="sv-modal-table">
+      <div class="actions">
+        <i class="remove icon"></i>
+      </div>
+    </div>
 
     <!-- sv-visualization functions -->
     <script src="js/sv-visualization.js"></script>

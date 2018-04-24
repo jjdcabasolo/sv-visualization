@@ -80,7 +80,7 @@ TODO
     ✔ correctly identify kung paano yung hotspots @done (18-03-15 23:31)
 
 15 Mar 2018:
-  ☐ problem with even number of hotspot (shitty yung itsura)
+  ✔ problem with even number of hotspot (shitty yung itsura) @done (18-04-16 17:54)
 
 18 Mar 2018:
  ✔ ayusin yung paqgbago ng flanking value @done (18-03-18 00:50)
@@ -103,10 +103,10 @@ chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
  ✔ nipisan yung branch height pati yung thickness ng track @done (18-04-03 17:10)
    ✔ set track width to 5 px @done (18-04-03 17:10)
  
- ☐ gawin checkboxes yung radio button para makapamili siya ng multiple types to visualize
-   ☐ pag walang lumabas, may message na lang na wala, hindi na siya makikihati sa view 
+ ✔ gawin checkboxes yung radio button para makapamili siya ng multiple types to visualize @done (18-04-16 22:17)
+   ✔ pag walang lumabas, may message na lang na wala, hindi na siya makikihati sa view @done (18-04-16 22:17)
 
- ☐ download image
+ ✔ download image @done (18-04-24 18:04)
  
  ☐ yung case na same cluster
  chr01  10  100  DEL;35  Ninox superciliaris  1
@@ -129,10 +129,10 @@ chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
  ☐ brush
    ☐ pag gumawa siya ng brush, automatic may lalabas na modal
  ☐ panibagong tapos may modal na magdiddisplay ng table
- ☐ button na save as / download as .csv or .tsv
-   ☐ pag csv, pwedeng 
+ ✔ button na save as / download as .csv or .tsv @done (18-04-24 18:05)
+   ✔ pag csv, pwedeng @done (18-04-24 18:05)
    chr01,15,50,DEL;35,Ninox superciliaris,1
-   ☐ tsv lahat ng column
+   ✔ tsv lahat ng column @done (18-04-24 18:05)
    chr01  10  100  DEL;35  Ninox superciliaris  1
    ☐ bed chr, start, end, save file extension as .bed
    chr01  60  80  DEL;20;Rana sp.;17

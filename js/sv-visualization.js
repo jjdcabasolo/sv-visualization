@@ -8,7 +8,7 @@ const fileDirRefGenome = 'data/dummyref.txt';
 const fileDirSVDel = 'data/dummysv-del.txt';
 // const fileDirSVDel = 'data/dummysv-ins.txt';
 // - svg-related
-const svg = d3.select('#sv-visualization-ins');
+const svg = d3.select('#sv-visualization');
 const svgTopMargin = 50; // in px
 const svgLeftMargin = 20; // in px
 const trackHeight = 5; // in px
@@ -23,7 +23,7 @@ const maxFlank = 50; // in bp
 // GLOBAL VARIABLES
 let referenceGenome = [];
 let structuralVariants = {};
-let svToDraw = [];
+let svToDraw = {};
 let svFrequency = {};
 let hotspotFrequency = {};
 let noOfChr = 0;
@@ -31,17 +31,21 @@ let noOfClusters = 0;
 let flankingValue = 20; // in bp
 let startChr = 0; // in bp
 let endChr = 0; // in bp
+let rowInSVG = 0;
 // - svg-related
 let maxChrBound = 0;
 let rulerInterval = 20; // in px
 let showSequence = true;
 let nightMode = false;
+let brush;
 let panZoomSVG = null;
-let zoom = true;
-let pan = true;
+let zoomToggle = false;
+let brushToggle = false;
+let panToggle = false;
 // - ui-related
 let showOptions = true;
 let isSidebarOpen = true;
+let typeSize = [0, 0, 0, 0];
 
 // initialization
 function initialize(){
@@ -103,13 +107,14 @@ function constructStructuralVariants(array){
 	// proceed to data structure composition
 	for(var i = 0; i < array.length; i++){
 		let sv = array[i].split(/\t/g),
-				typeLen = (isDelDupInv) ? sv[3].split(/;/g) : ["INS", "1"]; // [0] == type, [1] == length
+				typeLen = (isDelDupInv) ? sv[3].split(/;/g) : ['INS', '1']; // [0] == type, [1] == length
 				svObj = {};
 
 		svObj['chrNum'] = Number(sv[0].replace(/chr/g, ''));
 		svObj['start'] = Number(sv[1]);
 		svObj['end'] = Number(sv[2]);
 		svObj['length'] = Number(typeLen[1]);
+		svObj['type'] = typeLen[0];
 		svObj['sampleID'] = sv[4];
 		svObj['cluster'] = Number(sv[5]);
 
@@ -124,20 +129,41 @@ function constructStructuralVariants(array){
 
 // draw the visualization on the SVG [D3] @ readTextFile()
 function renderVisualization(){
-	svg.selectAll('*').remove(); // clear svg
-	setDetailsOnSubMenu();
-	addPopup();
+	svg.selectAll('*').remove(); // clear svg	
+	
+	// helpers
+	setDetailsOnSubMenu(); // details on top of the visualization when sidebar is closed
+	addPopup(); // adds the pop-up that appears when DEL, INV, DUP is clicked
+	
+	// ruler
 	drawRuler();
+
+	// reference genome
 	drawReferenceGenome();
-	drawStructuralVariants();
-	// enablePanAndZoom();
+
+	var rowInSVG = prepareTypeSpacing(),
+			variants = Object.keys(svToDraw),
+			index = 0
+	;
+
+	// structural variants
+	for(var i = 0; i < variants.length; i++){
+		if(svToDraw[variants[i]].length > 0){
+			drawStructuralVariants(typeSize[index], rowInSVG, variants[i]);
+			index++;
+		}
+	}
+
+	// pan and zoom
+	initializePanAndZoom();
 }
 
 // sets detail on sub menu (appears when sidebar is closed) @ renderVisualization()
 function setDetailsOnSubMenu(){
 	let startChr = Number($('#chr-start').val()),
 			endChr = Number($('#chr-end').val()),
-			chrNum = Number($('#chr-num-select').val());
+			chrNum = Number($('#chr-num-select').val())
+	;
 
 	$('#submenu-chr').text(chrNum);
 	$('#submenu-start').text(startChr + ' bp');
@@ -194,7 +220,9 @@ function addPopup(){
 			.attr('x', -1000)
 			.attr('y', -1000)
 			.attr('height', 10)
-			.attr('width', 500);
+			.attr('width', 500)
+	;
+
 	$('#popup-element').html(popup);
 }
 
@@ -431,7 +459,6 @@ function drawReferenceGenome(){
 					$('.sv-inv-arrowhead')[i].attributes.fill = 'url(#diagonalHatch)';
 				}
 			}
-			// console.log(wew);
 		}
 
 	  d3.select(this).style('fill', 'url(#diagonalHatch)');
@@ -453,11 +480,12 @@ function drawReferenceGenome(){
 				endChr = Number($('#chr-end').val()),
 				chrNum = Number($('#chr-num-select').val()),
 				svType = $('input[name=sv-type]:checked').val(),
-				color = svToText(0), x, y;
+				color = svToText(0), x, y
+		;
 
 		// make popup appear
-		x = isSidebarOpen ? event.clientX - 380 : event.clientX - 120;
-		y = event.clientY - 55;
+		x = isSidebarOpen ? event.clientX - 400 : event.clientX - 120;
+		y = event.clientY - 80;
 		$('#popup-element').attr('x', x);
 		$('#popup-element').attr('y', y);
 
@@ -474,7 +502,7 @@ function drawReferenceGenome(){
 	function markerClick(){
 		$('.sequence-delete').remove();
 
-		$('.modal').modal('show');
+		$('#sv-ins-details').modal('show');
 
 		let startChr = Number($('#chr-start').val()),
 				endChr = Number($('#chr-end').val()),
@@ -500,9 +528,6 @@ function drawReferenceGenome(){
 
 // determine the number of branches to be visualized; works for del, dup, inv
 function assignHotspotNumber(type){
-	let svBranchHeight = 0;
-	hotspotFrequency = {};
-
 	// iterate through the sv's then
 		// hotspot 1. grp of overlapping intervals 2. magsolo, walang kapatong
 		// hotspot == key na lang sa svToDraw, integer starting from 1
@@ -515,18 +540,20 @@ function assignHotspotNumber(type){
 	
 	// if(nextItem.start > maxBound) panibago nang hotspot
 	// use the same set of rules para makabilang yung isang interval sa hotspot
-	let minBound = svToDraw[0]['start'],
-			maxBound = svToDraw[0]['end'],
-			hotspotCount = 0;
+	let minBound = svToDraw[type][0]['start'],
+			maxBound = svToDraw[type][0]['end'],
+			svBranchHeight = 0,
+			hotspotCount = 0
+	;
 
-	svToDraw[0]['hotspot'] = hotspotCount;
-	svToDraw[0]['hotspotIndex'] = 0;
-	hotspotFrequency[hotspotCount] = 1 + (hotspotFrequency[hotspotCount] || 0);
-	svBranchHeight = hotspotFrequency[hotspotCount];
+	svToDraw[type][0]['hotspot'] = hotspotCount;
+	svToDraw[type][0]['hotspotIndex'] = 0;
+	hotspotFrequency[type][hotspotCount] = 1 + (hotspotFrequency[type][hotspotCount] || 0);
+	svBranchHeight = hotspotFrequency[type][hotspotCount];
 
-	// console.log('start:' + svToDraw[0]['start'] + ' end:' + svToDraw[0]['end'] + ' stackNo:' + svToDraw[0]['hotspot'] + ' index:' + svToDraw[0]['hotspotIndex']);
-	for(var i = 1; i < svToDraw.length; i++){
-		let nextSV = svToDraw[i];
+	// console.log('start:' + svToDraw[type][0]['start'] + ' end:' + svToDraw[type][0]['end'] + ' stackNo:' + svToDraw[type][0]['hotspot'] + ' index:' + svToDraw[type][0]['hotspotIndex']);
+	for(var i = 1; i < svToDraw[type].length; i++){
+		let nextSV = svToDraw[type][i];
 
 		if(type != 'INS'){
 			if(nextSV['start'] > maxBound){
@@ -544,51 +571,70 @@ function assignHotspotNumber(type){
 		if(type != 'INS'){
 			if(nextSV['end'] >= maxBound || maxBound == nextSV['start'] || nextSV['start'] >= minBound ){
 				maxBound = nextSV['end'];
-				svToDraw[i]['hotspot'] = hotspotCount;
+				svToDraw[type][i]['hotspot'] = hotspotCount;
 			}
 		}
 		else{
 			if(nextSV['end'] == maxBound || nextSV['start'] == minBound ){
-				svToDraw[i]['hotspot'] = hotspotCount;
+				svToDraw[type][i]['hotspot'] = hotspotCount;
 			}				
 		}
 
-		svToDraw[i]['hotspotIndex'] = (hotspotFrequency[hotspotCount] == null) ? 0 : hotspotFrequency[hotspotCount];
-		hotspotFrequency[hotspotCount] = 1 + (hotspotFrequency[hotspotCount] || 0);
-		if(svBranchHeight < hotspotFrequency[hotspotCount]){
-			svBranchHeight = hotspotFrequency[hotspotCount];
+		svToDraw[type][i]['hotspotIndex'] = (hotspotFrequency[type][hotspotCount] == null) ? 0 : hotspotFrequency[type][hotspotCount];
+		hotspotFrequency[type][hotspotCount] = 1 + (hotspotFrequency[type][hotspotCount] || 0);
+		if(svBranchHeight < hotspotFrequency[type][hotspotCount]){
+			svBranchHeight = hotspotFrequency[type][hotspotCount];
 		}
 
-		// console.log('start:' + svToDraw[i]['start'] + ' end:' + svToDraw[i]['end'] + ' stackNo:' + svToDraw[i]['hotspot'] + ' index:' + svToDraw[i]['hotspotIndex']);
+		// console.log('start:' + svToDraw[type][i]['start'] + ' end:' + svToDraw[type][i]['end'] + ' stackNo:' + svToDraw[type][i]['hotspot'] + ' index:' + svToDraw[type][i]['hotspotIndex']);
 	}
 
 	return svBranchHeight;
 }
 
+// computes the spacing for each sv-type to be visualized on the 
+function prepareTypeSpacing(){
+	let svType = [],
+			noOfmaxBranches = 0,
+			rowsSVG = 0,
+			adjustedRowsSVG = 0 
+	;
+
+	hotspotFrequency = {'INS':{}, 'DEL':{}, 'INV':{}, 'DUP':{}};
+
+	$('#sv-checkboxes input:checked').each(function(){
+		// gets all the checked checkboxes
+		svType.push($(this).attr('id'));
+	});
+
+	for (var i = 0; i < svType.length; i++) {
+		var newNoOfmaxBranches = assignHotspotNumber(svType[i]);
+		if(newNoOfmaxBranches > noOfmaxBranches){
+			noOfmaxBranches = newNoOfmaxBranches;
+		}
+	}
+
+	rowsSVG = (noOfmaxBranches % 2) != 0 ? noOfmaxBranches - 1 : noOfmaxBranches;
+	adjustedRowsSVG = (trackHeight) * rowsSVG;
+
+	typeSize[0] = 50 + bpToPx(rowsSVG); // spsce between reference genome and the first svtype visualization
+	for (var i = 1; i < 4; i++) { // for the remaining three
+		typeSize[i] = (typeSize[0] * (i+1)); // considers the number of branches on an svtype visualization
+	}
+
+	// change svg size 
+	$('#sv-visualization').attr('height', rowsSVG * 100);
+
+	return adjustedRowsSVG;
+}
+
 // draws the sv's within the specified range @ renderVisualization()
-function drawStructuralVariants(){
-	let svType = $('input[name=sv-type]:checked').val(),
-			svClusters = Object.keys(svFrequency[svType]).length,
-			refToSVSpace = 50, // in px
+function drawStructuralVariants(int, rowsSVG, svType){
+	let svClusters = Object.keys(svFrequency[svType]).length,
+			refToSVSpace = int, // in px
 			bodyBGColor = $('.pusher').css('backgroundColor'),
-			noOfmaxBranches = assignHotspotNumber(svType),
-			rowsSVG = (noOfmaxBranches % 2) != 0 ? noOfmaxBranches - 1 : noOfmaxBranches, 
 			flank = bpToPx(flankingValue),
-			rightAllowance = bpToPx(10);
-
-	rowsSVG = (trackHeight) * rowsSVG;
-
-	// provides the bg color at the bottom of the pattern
-	svg
-		.append('g')
-			.attr('class', 'sv-merged-line')
-		.append('rect')
-			.attr('x', 0)
-			.attr('y', svgTopMargin + refToSVSpace + rowsSVG)
-			.attr('width', maxChrBound + svgLeftMargin + (flank * 2) + rightAllowance)
-			.attr('height', trackHeight)
-			.attr('color', '#ab1a25')
-		.style('fill', '#ab1a25')
+			rightAllowance = bpToPx(10)
 	;
 
 	// draws the merged and continuous sv line
@@ -608,7 +654,7 @@ function drawStructuralVariants(){
 		// determines the y position of the 
 	  function locateYCoordinate(array){
 	  	let index = array[0],
-	  			maxCount = hotspotFrequency[array[1]],
+	  			maxCount = hotspotFrequency[array[4]][array[1]], // number of branches 
 			  	count = 0,
 			  	flank = bpToPx(flankingValue), 
 			  	x = bpToPx(array[3]) + 150,
@@ -619,17 +665,21 @@ function drawStructuralVariants(){
 
 	  	if(maxCount == 1){
 	  		// for single-itemed hotspot
-		  	return svgTopMargin + rowsSVG + array[2];
+		  	return svgTopMargin + (refToSVSpace - 50) + trackToMergedLine + rowsSVG;
 	  	}
 	  	else{
 	  		// for multiple-itemed hotspot
 	  		maxCount = maxCount - 1;
 		  	count = Math.abs(index - maxCount) - (Math.floor(maxCount / 2));
-		  	// count = ((maxCount + 1) % 2 == 0) ? count + 1 : count; // to handle even number of hotspots, aligning to merged sv line
-		  	// console.log(count);
-		  	count = (count < 0) ? Math.abs(count) + Math.floor(maxCount / 2) + 1 : count;
+		  	if((maxCount % 2) != 0){
+			  	count = (count < 0) ? Math.abs(count) + Math.floor(maxCount / 2) + 1 : count;
+		  	}
+		  	else{
+			  	count = (count < 0) ? Math.abs(count) + Math.floor(maxCount / 2) : count;
+		  	}
+
 	  	}
-	  	y = svgTopMargin + trackToMergedLine + (Math.abs(count) * ((trackHeight) + trackIntervalHeight));
+	  	y = svgTopMargin + (refToSVSpace - 50) + trackToMergedLine + (Math.abs(count) * ((trackHeight) + trackIntervalHeight));
 
 	  	return y;
 	  }
@@ -637,16 +687,20 @@ function drawStructuralVariants(){
 	  // forms the vertices of the DEL/DUP/INV track (rectangle on branch) @ svg.polyline.sv-branch
 	  function formVertices(d){  	
 			let string = '',
-					yFactor = 2.5
+					yFactor = 2.5,
 					base = svgTopMargin + refToSVSpace + rowsSVG + yFactor,
-					y = locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + yFactor,
+					y = locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start'], d['type']]) + yFactor,
 					xStart = bpToPx(d['start']) + bpToPx(flankingValue) - 50,
 					xEnd = xStart + bpToPx(d['length']) + bpToPx(flankingValue) - 50,
-					offset = 10 + ((d['hotspotIndex'] - 1) * 9);
+					offset = 10 + ((d['hotspotIndex'] - 1) * 9)
+			;
 
 			// makes the branching angle of each branches equal no matter the y position
-	  	if(d['hotspotIndex'] > (hotspotFrequency[d['hotspot']]/2)){
-	  		let indexFix = (d['hotspotIndex']+1) - Math.ceil(hotspotFrequency[d['hotspot']]/2);
+	  	if(d['hotspotIndex'] > (hotspotFrequency[d['type']][d['hotspot']] / 2)){
+	  		let indexFix = (d['hotspotIndex'] + 1) - Math.ceil(hotspotFrequency[d['type']][d['hotspot']] / 2);
+	  		if((hotspotFrequency[d['type']][d['hotspot']] % 2) == 0){ 
+	  			indexFix--; // adjustment fix for even number of branches
+	  		}
 				offset = 10 + ((indexFix - 1) * 9);
 	  	}
 
@@ -655,13 +709,15 @@ function drawStructuralVariants(){
 				string = string + xStart + ',' + y + ' ';
 				string = string + xEnd + ',' + y + ' ';
 				string = string + (xEnd + offset) + ',' + base + ' ';
-				return string;
 			}
+
+			return string;
 	  }
 
+	  // draws the polyline (trapezoidal manner) for the branches of the structural variants
 		svg
 			.selectAll('sv-branch')		
-			.data(svToDraw)
+			.data(svToDraw[svType])
 				.enter()
 			.append('polyline')
 				.attr('points', function(d){ return formVertices(d) })
@@ -669,20 +725,8 @@ function drawStructuralVariants(){
 			.style('fill', 'none')
 			.style('stroke', '#ab1a25')
 			.style('stroke-width', trackHeight)
-	  ;
-
-		svg
-			.selectAll('sv-branch')		
-			.data(svToDraw)
-				.enter()
-			.append('polyline')
-				.attr('points', function(d){ return formVertices(d) })
-				.attr('color', '#ab1a25')
-			.style('fill', 'none')
-			.style('stroke', '#ab1a25')
-			.style('stroke-width', trackHeight)
-			.on('mouseover', refMouseOver)
-	    .on('mouseout', refMouseOut)
+			// .on('mouseover', refMouseOver)
+	  	// .on('mouseout', refMouseOut)
 	  ;
 
 	  // changes color of track color when svtype = dup | inv
@@ -696,13 +740,13 @@ function drawStructuralVariants(){
 				// arrowhead upward
 				svg
 					.selectAll('sv-inv-arrowhead')		
-					.data(svToDraw)
+					.data(svToDraw[svType])
 						.enter()
 					.append('line')
 						.attr('x1', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) } )
 						.attr('x2', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) + 8 } )
-						.attr('y1', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + 2 } )
-						.attr('y2', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) - 4 } )
+						.attr('y1', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start'], d['type']]) + 2 } )
+						.attr('y2', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start'], d['type']]) - 4 } )
 						.attr('color', bodyBGColor)
 						.attr('start', function(d) { return d['start'] })
 						.attr('end', function(d) { return d['end'] })
@@ -717,13 +761,13 @@ function drawStructuralVariants(){
 			  // arrowhead downward
 				svg
 					.selectAll('sv-inv-arrowhead')		
-					.data(svToDraw)
+					.data(svToDraw[svType])
 						.enter()
 					.append('line')
 						.attr('x1', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) } )
 						.attr('x2', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) + 8 } )
-						.attr('y1', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + 2 } )
-						.attr('y2', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']]) + 8 } )
+						.attr('y1', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start'], d['type']]) + 2 } )
+						.attr('y2', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start'], d['type']]) + 8 } )
 						.attr('color', bodyBGColor)
 						.attr('start', function(d) { return d['start'] })
 						.attr('end', function(d) { return d['end'] })
@@ -741,11 +785,11 @@ function drawStructuralVariants(){
 		// highlight the range of the given sv 
 		svg
 			.selectAll('sv-sample')		
-			.data(svToDraw)
+			.data(svToDraw[svType])
 				.enter()
 			.append('rect')
 				.attr('x', function(d){ return 0 + svgLeftMargin + flank + bpToPx(d['start']) } )
-				.attr('y', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start']])} )
+				.attr('y', function(d){ return locateYCoordinate([d['hotspotIndex'], d['hotspot'], rowsSVG, d['start'], d['type']])} )
 				.attr('width', function(d) { return bpToPx(d['length']) } )
 				.attr('height', trackHeight)
 				.attr('color', bodyBGColor)
@@ -780,7 +824,7 @@ function drawStructuralVariants(){
 
 		svg
 			.selectAll('sv-stack')		
-			.data(svToDraw)
+			.data(svToDraw[svType])
 				.enter()
 			.append('polygon')
 				.attr('points', function(d){ return formVertices(d) } )
@@ -790,7 +834,7 @@ function drawStructuralVariants(){
 
 		svg
 			.selectAll('sv-stack')		
-			.data(svToDraw)
+			.data(svToDraw[svType])
 				.enter()
 			.append('polygon')
 				.attr('points', function(d){ return formVertices(d) } )
@@ -808,6 +852,7 @@ function drawStructuralVariants(){
 	}
 }
 
+// makes the fill of the track turn into a diagonal hatch [D3] @ drawReferenceGenome()
 function refMouseOver(){
   d3.select(this).style('stroke', 'url(#diagonalHatch)');
   $('.sample-genome').css('fill', 'url(#diagonalHatch)');
@@ -821,62 +866,77 @@ function refMouseOut(){
   $('.sample-genome').css('fill', color);
 }
 
-// enables pan and zoom for the whole SVG [jQuery plugin] @ renderVisualization()
-function enablePanAndZoom(){
+// removes the brush @ setupSemantic()
+function removeBrush(){
+	svg.selectAll('.brush').remove(); // clear brush	
+}
+
+function brushed(){
+	let brushStart = Number($('.handle--w').attr('x')) + 3,
+			brushEnd = Number($('.handle--e').attr('x')) + 3
+	;
+
+	// if($(selection))
+// $(this).replaceWith($('<h5>' + this.innerHTML + '</h5>'));
+	console.log('start:' + brushStart);
+	console.log('end:' + brushEnd);
+}
+
+function brushended(){
+	// console.log('wewewweewe');
+  // if (!d3.event.sourceEvent) return; // Only transition after input.
+  // if (!d3.event.selection) return; // Ignore empty selections.
+  // var d0 = d3.event.selection.map(x.invert),
+  //     d1 = d0.map(d3.timeDay.round);
+
+  // // If empty when rounded, use floor & ceil instead.
+  // if (d1[0] >= d1[1]) {
+  //   d1[0] = d3.timeDay.floor(d0[0]);
+  //   d1[1] = d3.timeDay.offset(d1[0]);
+  // }
+
+  // d3.select(this).transition().call(d3.event.target.move, d1.map(x));
+}
+
+// draws a brush on top of the sv visualization @ setupSemantic()
+function drawBrush(rowsSVG){
+	let chrStart = Number($('#chr-start').val()),
+			chrEnd = Number($('#chr-end').val()),
+			flank = bpToPx(flankingValue),
+			startPx = flank + svgLeftMargin,
+			endPx = bpToPx(chrEnd - chrStart) + startPx + 7
+	;
+
+	brush = d3
+		.brushX()
+	  	.extent([[startPx, 30], [endPx, 300]])
+   	.on('brush', brushed)
+	  .on('end', brushended)
+  ;
+
+	svg
+		.append('g')
+    	.attr('class', 'x brush')
+	    .call(brush)
+  ;
+}
+
+// initialize pan and zoom for the whole SVG [jQuery plugin] @ renderVisualization()
+function initializePanAndZoom(){
 	if(!panZoomSVG == null)	panZoomSVG.destroy();
-	console.log(panZoomSVG);
 
 	panZoomSVG = svgPanZoom('#sv-visualization', {
-		panEnabled: true,
-		zoomEnabled: true,
-		dblClickZoomEnabled: true,
-		mouseWheelZoomEnabled: true,
+		panEnabled: false,
+		zoomEnabled: false,
+		dblClickZoomEnabled: false,
+		mouseWheelZoomEnabled: false,
 		preventMouseEventsDefault: true,
 		zoomScaleSensitivity: 0.12,
 		minZoom: 0.1,
 		maxZoom: 5,
-		fit: true,
+		fit: false,
 		contain: false,
-		center: true
-	});
-
-	console.log(panZoomSVG);
-
-	// assign svgpan functions to buttons (zoom and pan buttons)
-	$('#reset-svg').on('click', function(){
-		panZoomSVG.reset();
-	});
-
-	$('#toggle-zoom-svg').on('click', function(){
-		if(!zoom){
-			panZoomSVG.enableZoom();
-			$('#toggle-zoom-svg').html('Zoom enabled');
-		}
-		else{
-			panZoomSVG.disableZoom();
-			$('#toggle-zoom-svg').html('Zoom disabled');
-		}
-		zoom = !zoom;
-	});
-
-	$('#zoom-in-svg').on('click', function(){
-		if(zoom) panZoomSVG.zoomIn();
-	});
-
-	$('#zoom-out-svg').on('click', function(){
-		if(zoom) panZoomSVG.zoomOut();
-	});
-
-	$('#toggle-pan-svg').on('click', function(){
-		if(!pan){
-			panZoomSVG.enablePan();
-			$('#toggle-pan-svg').html('Pan enabled');
-		}
-		else{
-			panZoomSVG.disablePan();
-			$('#toggle-pan-svg').html('Pan disabled');
-		}
-		pan = !pan;
+		center: false
 	});
 }
 
@@ -950,6 +1010,39 @@ function initializeActionListeners(){
 		isSidebarOpen = !isSidebarOpen;
 		if(isSidebarOpen){
 			$('#svg-holder').css('width', '95%');  // TODO: responsive width
+
+			if(brushToggle){
+				changeToolState('#brush-icon', 'brush', 'check', '#brush-toggle');
+				removeBrush();
+				brushToggle = false;
+				
+				// shows the brush tools
+				$('#brush-tools').css({
+					'-webkit-transform':'translate(-800px, 0px)',
+					'transition':'transform 0.5s ease'
+				});
+			}
+
+			if(panToggle){ // disables the pan on brush use
+				changeToolState('#pan-icon', 'hand pointer', 'check', '#pan-toggle');
+				panZoomSVG.disablePan(); // disable pan
+				panToggle = false;
+			}
+
+			if(zoomToggle){ // disables the zoom in brush use
+				changeToolState('#zoom-icon', 'zoom', 'check', '#zoom-toggle');
+				panZoomSVG.disableDblClickZoom(); // disable double click zoom
+				panZoomSVG.disableZoom(); // disable zoom
+
+				// hides the brush tools
+				$('#zoom-tools').css({
+					'-webkit-transform':'translate(-800px, 0px)',
+					'transition':'transform 0.5s ease'
+				});
+
+				zoomToggle = false;
+			}
+
 		}
 		else{
 			$('#svg-holder').css('width', '100%'); 
@@ -986,14 +1079,21 @@ function initializeSetCoordinates(){
 	$('#max-flank').text(maxFlank);
 
 	$('#chr-coordinates').click(function(){
-		$('#svg-holder').css('width', '95%'); // adjusts the svg view at start // TODO: responsive width
-
 		let startChr = Number($('#chr-start').val()) - 1,
 				endChr = Number($('#chr-end').val()) - 1,
 				maxBound = Number($('#max-count').text()),
 				errorRange = false, errorSV = false,
-				svType = $('input[name=sv-type]:checked').val();
+				svType = []
+		;
+
+		$('#sv-checkboxes input:checked').each(function(){
+			// gets all the checked checkboxes
+			svType.push($(this).attr('id'));
+		});
+
+		$('#svg-holder').css('width', '95%'); // adjusts the svg view at start // TODO: responsive width
 		
+		// bounds
 		if(maxBound < endChr){
 			// checks if the upper bound exceeds the length of the current chromosome
 			$('#range-message').text('The end range exceeds the length of the chromosome.');
@@ -1009,6 +1109,7 @@ function initializeSetCoordinates(){
 			$('#range-message').text('Check the range. The minimum range is ' + minimumRange + '.');
 			errorRange = true;
 		}
+
 		if(startChr == -1){
 			// checks if the start range input fields are empty
 			$('#range-message').text('Start range has no value.');
@@ -1019,6 +1120,7 @@ function initializeSetCoordinates(){
 			$('#range-message').text('End range has no value.');
 			errorRange = true;
 		}
+
 		if(svType == null){
 			$('#sv-message').text('Pick a structural variant type to visualize.');
 			errorSV = true;
@@ -1046,10 +1148,22 @@ function initializeSetCoordinates(){
 		let startChr = Number($('#chr-start').val()),
 				endChr = Number($('#chr-end').val()),
 				chrNum = Number($('#chr-num-select').val()),
-				svType = $('input[name=sv-type]:checked').val();
-		svToDraw = filterSV();
+				svType = '',
+				flag = 0,
+				keys = []
+		;
 
-		if(svToDraw.length == 0){
+		svToDraw = filterSV();
+		keys = Object.keys(svToDraw);
+
+		for(var i = 0; i < keys.length; i++){
+			if(svToDraw[keys[i]].length != 0){
+				flag = 1;
+				break;
+			}
+		}
+
+		if(flag == 0){
 			svType = svToText(1);
 
 			// sets the message for the error, automatically closes after 10 seconds
@@ -1066,50 +1180,74 @@ function initializeSetCoordinates(){
 		function filterSV(){
 			let startChr = Number($('#chr-start').val()),
 					endChr = Number($('#chr-end').val()),
-					svType = $('input[name=sv-type]:checked').val(),
+					svType = [],
 					chrNum = Number($('#chr-num-select option:selected').val()),
-					svArray = structuralVariants[svType],
-					returnArray = [];
-			
-			for(var i = 0; i < svArray.length; i++){
-				let start = svArray[i]['start'],
-						end = svArray[i]['end'],
-						num = svArray[i]['chrNum'];
+					svArray = [],
+					returnArray = [],
+					svToDraw = {'INS':[], 'DEL':[], 'INV':[], 'DUP':[]}
+			;
 
-				if(startChr <= start && endChr >= end && chrNum == num){
-					returnArray[returnArray.length] = svArray[i];
+			$('#sv-checkboxes input:checked').each(function(){
+				// gets all the checked checkboxes
+				svType.push($(this).attr('id'));
+			});
+
+			for (var j = 0; j < svType.length; j++) {
+				svArray = structuralVariants[svType[j]];
+				for(var i = 0; i < svArray.length; i++){
+					if(svArray[i]['type'] == svType[j]){
+						let start = svArray[i]['start'],
+								end = svArray[i]['end'],
+								num = svArray[i]['chrNum'];
+
+						if(startChr <= start && endChr >= end && chrNum == num){
+							returnArray[returnArray.length] = svArray[i];
+						}
+					}
 				}
+
+				svToDraw[svType[j]] = returnArray;
+				returnArray = [];
 			}
 
-			return(returnArray);
+			return svToDraw;
 		}
 
+// returns the sv-related info, index == 0, color; index == 1, type
 function svToText(index){
-	let svType = $('input[name=sv-type]:checked').val(),
+	let svType = [],
+			svString = '',
 			names = [
 				['teal', 'blue', 'violet', 'purple'],
 				['deletions', 'inversions', 'duplications', 'insertions'],
 			]
 	;
 
-	switch(svType){
-    case 'DEL':
-        svType = names[index][0];
+	$('#sv-checkboxes input:checked').each(function(){
+		// gets all the checked checkboxes
+		svType.push($(this).attr('id'));
+	});
+
+	for(var i = 0; i < svType.length; i++){
+		switch(svType[i]){
+	    case 'DEL':
+        svString = svString + names[index][0] + ', ';
         break;
-    case 'INV':
-        svType = names[index][1];
+	    case 'INV':
+        svString = svString + names[index][1] + ', ';
         break;
-    case 'DUP':
-        svType = names[index][2];
+	    case 'DUP':
+        svString = svString + names[index][2] + ', ';
         break;
-    case 'INS':
-        svType = names[index][3];
+	    case 'INS':
+        svString = svString + names[index][3] + ', ';
         break;
-    default:
-        svType = 'magical SV\'s';
+	    default:
+        svString = 'magical SV\'s';
+		}
 	}
 
-	return svType;
+	return svString;
 }
 
 // HTML DOM manipulations [jQuery] @ initialize()
@@ -1130,7 +1268,20 @@ function changeHTMLDOM(){
 	$('#sv-visualization').attr('height', '500px');
 	$('#sv-visualization').attr('width', '100%');
 
-	$('#query-details').css({'-webkit-transform':'translate(-500px, 0px)'});
+	$('#query-details').css({'-webkit-transform':'translate(-800px, 0px)'});
+	$('#zoom-tools').css({'-webkit-transform':'translate(-800px, 0px)'});
+	$('#brush-tools').css({'-webkit-transform':'translate(-800px, 0px)'});
+}
+
+function changeToolState(iconID, addClassID, removeClassID, buttonID){
+	$(iconID)
+		.addClass(addClassID)
+		.removeClass(removeClassID)
+		.transition({
+			animation: 'flash',
+			duration: '0.2s'
+		});
+	$(buttonID).removeClass('active');
 }
 
 // semantic element initializations and enabling [jQuery] @ initialize()
@@ -1147,30 +1298,303 @@ function setupSemantic(){
 	// makes the option at the sidebar disappear on sidebar close
 	$('#left-sidebar-toggle').on('click', function(){
 		if(showOptions){
-			$('#return-options').css({'-webkit-transform':'translate(0px, -329px)','transition':'transform 0.5s ease'}); // 65px:1block 5px:menu
-			$('#query-details').css({'-webkit-transform':'translate(100px, 0px)','transition':'transform 0.5s ease'});
-			$('#option-toggle').addClass('sidebar').removeClass('window close').transition({animation: 'flash', duration: '0.4s'});
+			$('#return-options').css({
+				'-webkit-transform':'translate(0px, -329px)',
+				'transition':'transform 0.5s ease'
+			}); // 65px:1block 5px:menu
+			$('#query-details').css({
+				'-webkit-transform':'translate(100px, 0px)',
+				'transition':'transform 0.5s ease'
+			});
+			$('#option-toggle')
+				.addClass('sidebar')
+				.removeClass('window close')
+				.transition({
+					animation: 'flash',
+					duration: '0.4s'
+				});
 		}
 		else{
-			$('#return-options').css({'-webkit-transform':'translate(0px, 0px)','transition':'transform 0.5s ease'});
-			$('#query-details').css({'-webkit-transform':'translate(-500px, 0px)','transition':'transform 0.5s ease'});
-			$('#option-toggle').addClass('window close').removeClass('sidebar').transition({animation: 'flash', duration: '0.4s'});
+			$('#return-options').css({
+				'-webkit-transform':'translate(0px, 0px)',
+				'transition':'transform 0.5s ease'
+			});
+			$('#query-details').css({
+				'-webkit-transform':'translate(-800px, 0px)',
+				'transition':'transform 0.5s ease'
+			});	
+			$('#option-toggle')
+				.addClass('window close')
+				.removeClass('sidebar')
+				.transition({
+					animation: 'flash',
+					duration: '0.4s'
+				});
 		}
 		showOptions = !showOptions;
 	});
-	
+
+	// assign tools on zoom tool
+	$('#reset-toggle').on('click', function(){
+		panZoomSVG.reset();
+	});
+
+	$('#fit-toggle').on('click', function(){
+		panZoomSVG.fit();
+	});
+
+	$('#zoom-in-toggle').on('click', function(){
+		panZoomSVG.zoomIn();
+	});
+
+	$('#zoom-out-toggle').on('click', function(){
+		panZoomSVG.zoomOut();
+	});
+
+	$('#zoom-toggle').on('click', function(){
+		if(zoomToggle){
+			changeToolState('#zoom-icon', 'zoom', 'check', '#zoom-toggle');
+
+			// hides the zoom tools
+			$('#zoom-tools').css({
+				'-webkit-transform':'translate(-800px, 0px)',
+				'transition':'transform 0.5s ease'
+			});
+
+			panZoomSVG.disableDblClickZoom(); // disable double click zoom
+			panZoomSVG.disableZoom(); // disable zoom
+ 		}
+		else{
+			changeToolState('#zoom-icon', 'check', 'zoom', '#zoom-toggle');
+
+			// disables brush on zoom use
+			if(brushToggle){
+				changeToolState('#brush-icon', 'brush', 'check', '#brush-toggle');
+				removeBrush();
+				brushToggle = false;
+
+				// shows the brush tools
+				$('#brush-tools').css({
+					'-webkit-transform':'translate(-800px, 0px)',
+					'transition':'transform 0.5s ease'
+				});
+
+			}
+
+			// shows the zoom tools
+			$('#zoom-tools').css({
+				'-webkit-transform':'translate(514px, 0px)',
+				'transition':'transform 0.5s ease'
+			});
+
+			panZoomSVG.enableDblClickZoom(); // enable double click zoom
+			panZoomSVG.enableZoom(); // enable zoom
+		}
+		zoomToggle = !zoomToggle;
+	});
+
+	$('#pan-toggle').on('click', function(){
+		if(panToggle){
+			changeToolState('#pan-icon', 'hand pointer', 'check', '#pan-toggle');
+			panZoomSVG.disablePan(); // disable pan
+ 		}
+		else{
+			changeToolState('#pan-icon', 'check', 'hand pointer', '#pan-toggle');
+
+			// disables brush on pan use
+			if(brushToggle){
+				changeToolState('#brush-icon', 'brush', 'check', '#brush-toggle');
+				removeBrush();
+				brushToggle = false;
+
+				// shows the brush tools
+				$('#brush-tools').css({
+					'-webkit-transform':'translate(-800px, 0px)',
+					'transition':'transform 0.5s ease'
+				});
+			}
+
+			panZoomSVG.enablePan(); // enable pan
+		}
+		panToggle = !panToggle;
+	});
+
+	$('#brush-toggle').on('click', function(){
+		if(brushToggle){
+			changeToolState('#brush-icon', 'brush', 'check', '#brush-toggle');
+			removeBrush();
+			
+			// shows the brush tools
+			$('#brush-tools').css({
+				'-webkit-transform':'translate(-800px, 0px)',
+				'transition':'transform 0.5s ease'
+			});
+		}
+		else{
+			changeToolState('#brush-icon', 'check', 'brush', '#brush-toggle');
+			
+			// with the brush active, you cannot use zoom and pan. just deal with it.
+			if(panToggle){ // disables the pan on brush use
+				changeToolState('#pan-icon', 'hand pointer', 'check', '#pan-toggle');
+				panZoomSVG.disablePan(); // disable pan
+				panToggle = false;
+			}
+
+			if(zoomToggle){ // disables the zoom in brush use
+				changeToolState('#zoom-icon', 'zoom', 'check', '#zoom-toggle');
+				panZoomSVG.disableDblClickZoom(); // disable double click zoom
+				panZoomSVG.disableZoom(); // disable zoom
+
+				// hides the brush tools
+				$('#zoom-tools').css({
+					'-webkit-transform':'translate(-800px, 0px)',
+					'transition':'transform 0.5s ease'
+				});
+
+				zoomToggle = false;
+			}
+			
+			// shows the zoom tools
+			$('#brush-tools').css({
+				'-webkit-transform':'translate(682px, 0px)',
+				'transition':'transform 0.5s ease'
+			});
+
+			panZoomSVG.reset(); // resets the view
+			drawBrush(rowInSVG);
+		}
+		brushToggle = !brushToggle;
+	});
+		
+	$('#show-table-toggle').on('click', function(){
+		if(!($('rect.selection').attr('width') === undefined)){
+			$('#sv-modal-table').modal('show');
+
+			$('.remove-table').remove();
+			$('.remove-actions').remove();
+
+			var keys = Object.keys(svToDraw),
+					copySV = JSON.parse(JSON.stringify(svToDraw)),
+					arrayOfObjects, htmlTag
+			;
+
+			for(var i = 0; i < keys.length; i++){
+				arrayOfObjects = copySV[keys[i]];
+				for (var j = 0; j < arrayOfObjects.length; j++) {
+					delete arrayOfObjects[j]['hotspotIndex']; 
+					delete arrayOfObjects[j]['hotspot']; 
+				}
+				if(arrayOfObjects.length > 0){
+					// adds header for each table
+					arrayOfObjects.unshift({
+						'chrNum': 'Chr. No.',
+						'start': 'Start',
+						'end': 'End',
+						'length': 'Length',
+						'type': 'Type',
+						'sampleID': 'SampleID',
+						'cluster': 'Cluster',
+					});
+					
+					// add buttons for table exporting
+			  	htmlTag = 
+			      '<div class="actions remove-actions">' + 
+					  	'<div class="ui inverted button export-csv" id="csv' + keys[i] + '">' +
+			          'Export to CSV' +
+			        '</div>' +
+			        '<div class="ui inverted button export-tsv" id="tsv' + keys[i] + '">' +
+			          'Export to TSV' +
+			        '</div>' +
+			        '<div class="ui inverted button export-bed" id="bed' + keys[i] + '">' +
+			          'Export to BED' +
+			        '</div>' + 
+		        '</div>';
+					$('#sv-modal-table').append(htmlTag);
+				}
+
+				$.jsontotable(copySV[keys[i]], { id: '#sv-modal-table', header: true, className: 'ui selectable celled padded table remove-table ' + keys[i] });
+			}
+
+			initializeTableExportButtons();
+		}
+	});
+
+	$('#brush-adjust').on('click', function(){
+		let brushStart = Number($('#brush-start').val()),
+				brushEnd = Number($('#brush-end').val())
+		;
+
+		console.log(brushStart);
+		console.log(brushEnd);
+	});
+
+	// set-up the export button
+	$('#screenshot').on('click', function(){
+		saveSvgAsPng(document.getElementById('sv-visualization'), 'sv-visualization.png', {backgroundColor: 'white'});
+	});
+
 	$('.menu .item').tab(); // enable semantic tab
 
 	$('.ui.dropdown').dropdown(); // enable semantic dropdown
 
 	$('.ui.checkbox').checkbox(); // enable semantic checkbox
 
-	$('.message .close').on('click', function() { $(this).parent().transition('fade'); }); // initialize message close
+	$('#brush-options-toggle').popup({
+		on: 'click'
+	});
 
+	$('.message .close').on('click', function(){
+		$(this).parent().transition('fade');
+	}); // initialize message close
+
+	// automation
 	$('#chr-start').val(1);
 	$('#chr-end').val(100);
+	// $('#INS').prop('checked', true); 
 	$('#INV').prop('checked', true); 
+	// $('#DUP').prop('checked', true); 
+	$('#DEL').prop('checked', true); 
+}
 
+function initializeTableExportButtons(){
+	function formStringSaveFile(tag, separator, fileType){
+		var type = tag.id.replace(fileType, ''),
+				keys = Object.keys(svToDraw),
+				copySV = JSON.parse(JSON.stringify(svToDraw)),
+				arrayOfObjects = copySV[type],
+				fields, array = []
+		;
+
+		console.log(arrayOfObjects);
+		arrayOfObjects.shift();
+		console.log(arrayOfObjects);
+		for (var j = 0; j < arrayOfObjects.length; j++) {
+			delete arrayOfObjects[j]['hotspotIndex']; 
+			delete arrayOfObjects[j]['hotspot']; 
+		}
+		fields = Object.keys(arrayOfObjects[0]);
+
+		var replacer = function(key, value) { return value === null ? '' : value } 
+		var data = arrayOfObjects.map(function(row){
+		  return fields.map(function(fieldName){
+		    return JSON.stringify(row[fieldName], replacer)
+		  }).join(separator)
+		})
+
+		data.unshift(fields.join(separator)) // add header column
+		array.push(data.join('\r\n'));
+
+		var file = new File(array, 'sv' + type + '.' + fileType + '', {type: 'text/plain;charset=utf-8'});
+		saveAs(file);
+	}
+
+	$('.export-csv').on('click', function(){
+		formStringSaveFile(this, ',', 'csv');
+	});
+
+	$('.export-tsv').on('click', function(){
+		formStringSaveFile(this, '\t', 'tsv');
+	});
 }
 
 initialize();
