@@ -9,26 +9,25 @@
     <title>sv-visualization</title>
     
     <!-- d3.js files -->
-    <script src="js/d3.min.js"></script>
+    <script src="public/js/d3.min.js"></script>
 
     <!-- jQuery files -->
-    <script src="js/jquery-3.2.1.min.js"></script>
+    <script src="public/js/jquery-3.2.1.min.js"></script>
 
     <!-- jQuery plugins -->
-    <script src="js/plugins/svg-pan-zoom.min.js"></script> <!-- zoom -->
-    <script src="js/plugins/jquery.jsontotable.js"></script> <!-- json to table -->
-    <script src="js/plugins/FileSaver.min.js"></script> <!-- file -->
-    <script src="js/plugins/tableexport.min.js"></script> <!-- json to csv & tsv -->
+    <script src="public/js/plugins/svg-pan-zoom.min.js"></script> <!-- zoom -->
+    <script src="public/js/plugins/jquery.jsontotable.js"></script> <!-- json to table -->
+    <script src="public/js/plugins/FileSaver.min.js"></script> <!-- file -->
 
     <!-- exporting js -->
-    <script src="js/saveSvgAsPng.js"></script>
+    <script src="public/js/saveSvgAsPng.js"></script>
 
     <!-- semantic ui files -->
-    <link rel="stylesheet" href="css/semantic.min.css">
-    <script src="js/semantic.min.js"></script>
-
+    <link rel="stylesheet" type="text/css" href="public/css/semantic.min.css">
+    <script src="public/js/semantic.min.js"></script>
+  
     <!-- css -->
-    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="public/css/main.css">
   </head>
 
   <body>
@@ -37,7 +36,7 @@
         <h1>sv-visualization</h1>
         Structural variant visualization using D3.js and jQuery.
       </div>
-
+      
       <div class="ui tab active" data-tab="query">
         <div class="item">
           <h4>Query chromosome region</h4>
@@ -130,7 +129,7 @@
         <div class="item">
           <button class="ui right floated button night-mode" id="chr-coordinates">Go!</button><br>
         </div>
-      </div>
+   </div>
 
       <div class="ui tab" data-tab="settings">
         <div class="item">
@@ -258,7 +257,7 @@
               <a class="item" id="brush-options-toggle">
                 <i class="options icon"></i>
               </a>
-              <div class="ui popup flowing transition hidden"  id="expand-brush-options">
+              <div class="ui popup flowing transition hidden" id="expand-brush-options">
                 <div class="ui aligned grid">
                   <div class="column">
                     <div class="ui labeled fluid input">
@@ -269,14 +268,14 @@
                       <div class="ui label">End</div>
                       <input type="number" id="brush-end" min="1" name="brush-start" placeholder="in base pairs">
                     </div><br>  
-                    <p>
+                    <p class="ui sub header remove-margin">
                       Adjust brush
                       <button class="ui right floated button night-mode" id="brush-adjust">Go!</button>
-                    </p>
-                    <div class="ui negative message mini transition hidden" id="dismissible-error-range">
+                    </p><br>
+                    <div class="ui negative message mini hidden transition" id="dismissible-brush">
                       <i class="close icon"></i>
                       <div class="header">Failed to query.</div>
-                      <span id="range-message"></span>
+                      <span id="brush-range-message"></span>
                     </div>
                   </div>
                 </div>
@@ -315,6 +314,9 @@
         </div>
 
         <div id="sv-visualization-area">
+          <div class="ui active centered large text loader disabled" id="sv-loader">
+            Loading
+          </div>
           <br>
           <div id="svg-holder">
             <div class="ui grid">
@@ -389,6 +391,7 @@
     </div>
 
     <!-- sv-visualization functions -->
-    <script src="js/sv-visualization.js"></script>
+    <script src="public/js/sv-visualization.js"></script>
+    <script src="public/js/init.js"></script>
   </body>
 </html>

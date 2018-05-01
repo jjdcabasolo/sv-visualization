@@ -126,9 +126,9 @@ chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
  ☐ save sa SQL yung file na binigay ni sir
    ☐ yung type at yung length a magkaibang column sa mysql
 
- ☐ brush
-   ☐ pag gumawa siya ng brush, automatic may lalabas na modal
- ☐ panibagong tapos may modal na magdiddisplay ng table
+ ✔ brush @done (18-05-01 13:26)
+   ✔ pag gumawa siya ng brush, automatic may lalabas na modal @done (18-05-01 13:26)
+ ✔ panibagong tapos may modal na magdiddisplay ng table @done (18-05-01 13:26)
  ✔ button na save as / download as .csv or .tsv @done (18-04-24 18:05)
    ✔ pag csv, pwedeng @done (18-04-24 18:05)
    chr01,15,50,DEL;35,Ninox superciliaris,1
@@ -148,3 +148,6 @@ chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
  ☐ submit insertion to blast
    ☐ blastn suite tignan mo na lang yung email ni sir
    ☐ may button sa ilalim ng inserted sequence para gamitin sa blast something
+
+01 May 2018:
+ ☐ sir pwede po bang and iindicate na chr-length ay yung max interval sa sv file para hindi na mag-abala yung user na tignan yung mga empty parts?
