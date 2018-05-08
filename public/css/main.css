@@ -75,3 +75,15 @@ svg#sv-visualization-dup {
 #expand-brush-options {
 	width: 250px;
 }
+
+#popup-element{
+    position: absolute !important;
+}
+
+.sleep {
+	pointer-events: none;
+}
+
+.sequence-delete {
+	word-wrap: break-word;
+}

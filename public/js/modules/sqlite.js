@@ -3,30 +3,15 @@ var svDB, refDB;
 
 var arrayOfSV = new Array();
 
-// module.exports.openRefGenomeDB = function(){
-// 	refDB = new sqlite3.Database('./ref/raw/ref.db', (err) => {
-// 		if(err){
-// 			return console.error(err.message);
-// 		}
-// 		console.log('Connected to ref.db SQlite database.');
-// 	});	
-// }
-
-// module.exports.closeRefDB = function(){
-// 	refDB.close(); 
-// }
-
-var openDB = function(chr, type, start, end, res){
-	svDB = new sqlite3.Database('./db/sv/processed/sv.db', (err) => {
+module.exports.openDB = function(filename){
+	svDB = new sqlite3.Database(filename, (err) => {
 		if(err){
 			return console.error(err.message);
 		}
 	});	
 }
 
-module.exports.getSV = function(chr, type, start, end, res){
-	openDB();
-
+module.exports.getSV = function(chr, type, start, end, callback){
 	svDB.serialize(function() {
 		var query = 'SELECT * FROM ';
 
@@ -65,25 +50,27 @@ module.exports.getSV = function(chr, type, start, end, res){
 		query = query + 'end <= ';
 		query = query + end;
 
-		// console.log(query);
+		console.log(query);
 
 		svDB.each(query, function(err, rows) {
 			if(err){
 				console.log(err);
 			}
 			else{
+				if(type === 'INS') rows['sequence'] = rows['type'];
+				rows['type'] = type;
 				arrayOfSV.push(rows);
 			}
 		});
 
 		svDB.close(); 		
 
-		var callback = setInterval(function(){
+		var interval = setInterval(function(){
 			if(arrayOfSV !== []){
-				clearInterval(callback);
-				res.send(arrayOfSV);
+				clearInterval(interval);
+				callback(arrayOfSV);
 				arrayOfSV = [];
 			}
-		}, 10);
+		}, 3000);
 	});
 }

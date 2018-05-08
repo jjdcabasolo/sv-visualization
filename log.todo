@@ -84,10 +84,10 @@ TODO
 
 18 Mar 2018:
  ✔ ayusin yung paqgbago ng flanking value @done (18-03-18 00:50)
- ☐ yung pag nagnightmode, shitty yung deletions haha kita pa rin 
- ☐ ruler highlight -  may linya pababa tapos may number sa taas pag naghover sa ruler line 
+ ☐ yung pag nagnightmode, shitty yung deletions haha kita pa rin
+ ✘ ruler highlight -  may linya pababa tapos may number sa taas pag naghover sa ruler line @cancelled (18-05-07 21:49)
  ☐ mas ok siguro kung yung help ay modal na lang para maraming mailagay
- ☐ yung scrollbar ng tooltip, constant yung width and height para scrollable
+ ✔ yung scrollbar ng tooltip, constant yung width and height para scrollable @done (18-05-07 21:49)
  ✔ highlight yung branch together with reference para hindi halata yung polyline @done (18-03-18 00:50)
 
 pwede ko po bang iasssume na walang uulit na row na iisa yung kanilang cluster id?
@@ -108,23 +108,23 @@ chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
 
  ✔ download image @done (18-04-24 18:04)
  
- ☐ yung case na same cluster
+ ✔ yung case na same cluster @done (18-05-07 21:48)
  chr01  10  100  DEL;35  Ninox superciliaris  1
  chr01  20  100  DEL;35  Ninox superciliaris  1
- ☐ use the first occurence of the similar cluster
- ☐ group via cluster 
- ☐ assumption: sorted by chromosome, then start, then cluster && single occurence
- ☐ same cluster id, imemerge
- ☐ branching factor na ay yung branch, isang branch, isang cluster (ichecheck )
-   ☐ hindi pwedeng magkaroon ng in between 
-   ☐ gagamitin ko ay walang redundant cluster
-   ☐ one occurence, preprocess
-   ☐ another file: mapping ng samples
- ☐ ibibigay ni sir yung file dun sa preprocessing na pagmemerge ng clusters
-   ☐ isang row, isang cluster na lang 
+ ✔ use the first occurence of the similar cluster @done (18-05-07 21:48)
+ ✔ group via cluster @done (18-05-07 21:48)
+ ✔ assumption: sorted by chromosome, then start, then cluster && single occurence @done (18-05-07 21:49)
+ ✔ same cluster id, imemerge @done (18-05-07 21:49)
+ ✔ branching factor na ay yung branch, isang branch, isang cluster (ichecheck ) @done (18-05-07 21:49)
+   ✔ hindi pwedeng magkaroon ng in between @done (18-05-07 21:49)
+   ✔ gagamitin ko ay walang redundant cluster @done (18-05-07 21:49)
+   ✔ one occurence, preprocess @done (18-05-07 21:49)
+   ✔ another file: mapping ng samples @done (18-05-07 21:49)
+ ✔ ibibigay ni sir yung file dun sa preprocessing na pagmemerge ng clusters @done (18-05-07 21:49)
+   ✔ isang row, isang cluster na lang @done (18-05-07 21:49)
 
- ☐ save sa SQL yung file na binigay ni sir
-   ☐ yung type at yung length a magkaibang column sa mysql
+ ✔ save sa SQL yung file na binigay ni sir @done (18-05-07 21:48)
+   ✔ yung type at yung length a magkaibang column sa mysql @done (18-05-07 21:48)
 
  ✔ brush @done (18-05-01 13:26)
    ✔ pag gumawa siya ng brush, automatic may lalabas na modal @done (18-05-01 13:26)
@@ -137,8 +137,8 @@ chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
    ☐ bed chr, start, end, save file extension as .bed
    chr01  60  80  DEL;20;Rana sp.;17
 
- ☐ yung admin panel na pagupload ng files
- ☐ append at overwrite yung files
+ ✘ yung admin panel na pagupload ng files @cancelled (18-05-07 21:48)
+ ✘ append at overwrite yung files @cancelled (18-05-07 21:48)
 
  ☐ gene annotation file 
 
@@ -150,4 +150,9 @@ chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
    ☐ may button sa ilalim ng inserted sequence para gamitin sa blast something
 
 01 May 2018:
- ☐ sir pwede po bang and iindicate na chr-length ay yung max interval sa sv file para hindi na mag-abala yung user na tignan yung mga empty parts?
+ ✘ sir pwede po bang and iindicate na chr-length ay yung max interval sa sv file para hindi na mag-abala yung user na tignan yung mga empty parts? @cancelled (18-05-07 13:32)
+
+ 02 May 2018:
+ ☐ baguhin yung itsura ng deletions because it is shit
+ ☐ extend the sequence text upto the flank value
+ ☐ add the gene annotation file

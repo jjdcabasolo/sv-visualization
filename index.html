@@ -25,12 +25,51 @@
     <!-- semantic ui files -->
     <link rel="stylesheet" type="text/css" href="public/css/semantic.min.css">
     <script src="public/js/semantic.min.js"></script>
+    <script src="public/js/range.js"></script>
   
     <!-- css -->
     <link rel="stylesheet" href="public/css/main.css">
+    <link rel="stylesheet" href="public/css/range.css">
+
+    <link rel="shortcut icon" type="image/png" href="public/assets/favicon.ico"/>
   </head>
 
   <body>
+      <div class="ui pointing basic label" id="popup-element"> 
+        <div class="ui list"> 
+          <div class="item"> 
+          <div class="ui image large label" id="sv-label"> 
+            Structural variant type 
+            <div class="detail" id="sv-label-detail"></div> 
+          </div> 
+          </div> 
+          <div class="item"> 
+          <div class="ui image grey large label"> 
+            Chr no. 
+            <div class="detail" id="sv-label-chr-detail"></div> 
+          </div> 
+          <div class="content"> 
+            <div class="ui image grey large label"> 
+              Cluster 
+              <div class="detail" id="sv-label-cluster-detail"></div> 
+            </div> 
+          </div> 
+          </div> 
+          <div class="item"> 
+          <div class="ui image grey large label"> 
+            Start 
+            <div class="detail" id="sv-label-start-detail"></div> 
+          </div> 
+          <div class="content"> 
+            <div class="ui image grey large label"> 
+              End 
+              <div class="detail" id="sv-label-end-detail"></div> 
+            </div> 
+          </div> 
+          </div> 
+        </div> 
+      </div>
+
     <div class="ui left vertical sidebar menu visible night-mode">
       <div class="item">
         <h1>sv-visualization</h1>
@@ -57,7 +96,7 @@
           <select class="ui dropdown fluid" id="chr-num-select"></select>
           <div class="ui mini info message">
             <div class="header">
-              Chromosome length:
+              Chr length:
               <span id="max-count"></span>
             </div>
             <p>The unit is in base pairs.</p>
@@ -115,10 +154,6 @@
                 </div>
               </div>
             </div>
-            <!-- <div class="ui mini warning visible message">
-              <div class="header">Note:</div>
-              <p>You can only view one SV type at a time.</p>
-            </div> -->
             <div class="ui negative message mini transition hidden" id="dismissible-error-sv">
               <i class="close icon"></i>
               <div class="header">Failed to query.</div>
@@ -129,7 +164,7 @@
         <div class="item">
           <button class="ui right floated button night-mode" id="chr-coordinates">Go!</button><br>
         </div>
-   </div>
+      </div>
 
       <div class="ui tab" data-tab="settings">
         <div class="item">
@@ -137,32 +172,26 @@
         </div> 
         <div class="item">
           <div class="ui sub header night-mode">Ruler options:</div>
+
+          <div class="ui range" id="interval-range"></div>
+          <br>
           <div class="ui labeled fluid input">
             <div class="ui label">Interval</div>
             <input type="number" id="ruler-interval" name="ruler-interval" placeholder="in base pairs">
-          </div>
-          <div class="ui mini info message">
-            <div class="header">
-              Min: <span id="min-interval"></span> bp |
-              Max: <span id="max-interval"></span> bp
-            </div>
-            <p>Setting an incorrect value will automatically be adjusted to the boundaries.</p>
-          </div>
+          </div><br>
+
+          <div class="ui range" id="flank-range"></div>
+          <br>
           <div class="ui labeled fluid input">
             <div class="ui label">Flank</div>
             <input type="number" id="ruler-flank" name="ruler-flank" placeholder="in base pairs">
           </div>
-          <div class="ui mini info message">
-            <div class="header">
-              Min: <span id="min-flank"></span> bp |
-              Max: <span id="max-flank"></span> bp
-            </div>
-            <p>Setting an incorrect value will automatically be adjusted to the boundaries.</p>
-          </div>
+
           <div class="ui fluid toggle checkbox">
             <input type="checkbox" id="toggle-seq-text" name="toggle-seq-text"><br>
             <label class="inverted-text">Hide sequence text</label>
           </div>
+
           <div class="ui mini warning visible message">
             <div class="header">Note:</div>
             <p>Changes are applied on the next visualization render.</p>
@@ -174,6 +203,11 @@
             <input type="checkbox" id="toggle-night-mode" name="toggle-night-mode"><br>
             <label class="inverted-text">Enable night mode</label>
           </div><br>
+
+          <div class="ui fluid toggle checkbox">
+            <input type="checkbox" id="toggle-grid" name="toggle-grid"><br>
+            <label class="inverted-text">Show grid</label>
+          </div>
         </div>
       </div>
 
@@ -281,7 +315,7 @@
                 </div>
               </div>
               <a class="item" id="show-table-toggle">
-                <i class="table icon"></i>
+                <i class="table icon" id="table-icon-tool"></i>
               </a>
             </div>
           </div>
@@ -312,7 +346,6 @@
             Options
           </a>            
         </div>
-
         <div id="sv-visualization-area">
           <div class="ui active centered large text loader disabled" id="sv-loader">
             Loading
@@ -329,7 +362,7 @@
       </div>
     </div>
 
-    <div class="ui modal tiny basic" id="sv-ins-details">
+    <div class="ui modal basic" id="sv-ins-details">
       <i class="close icon"></i>
       <div class="ui list">
         <div class="item">
@@ -342,10 +375,6 @@
               Chr no.
               <div class="detail" id="sv-modal-chr-detail"></div>
             </div>
-          </div>
-        </div>
-        <div class="item">
-          <div class="content">
             <div class="ui image grey large label">
               Start
               <div class="detail" id="sv-modal-start-detail"></div>
@@ -354,18 +383,6 @@
               End
               <div class="detail" id="sv-modal-end-detail"></div>
             </div>
-            <div class="ui image grey large label">
-              Cluster
-              <div class="detail" id="sv-modal-cluster-detail"></div>
-            </div>
-          </div>
-        </div>
-        <div class="item">
-          <div class="content">
-            <div class="ui image grey large label">
-              Sample ID
-              <div class="detail" id="sv-modal-sampleID-detail"></div>
-            </div>        
           </div>
         </div>
         <div class="item">
@@ -373,9 +390,7 @@
             <div class="ui card fluid" style="border-radius: 6px;">
               <div class="content">
                 <div class="header">Inserted sequence:</div>
-                <div class="description">
-                  <ul class="ui list" id="sv-modal-insertedSeq-detail">
-                  </ul>
+                <div class="description" id="sv-modal-table-ins">
                 </div>
               </div>
             </div>
@@ -384,7 +399,7 @@
       </div>
     </div>
     
-    <div class="ui modal tiny basic" id="sv-modal-table">
+    <div class="ui modal basic" id="sv-modal-table">
       <div class="actions">
         <i class="remove icon"></i>
       </div>
