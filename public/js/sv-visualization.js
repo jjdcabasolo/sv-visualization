@@ -251,7 +251,6 @@
 
 		// draw the visualization on the SVG [D3] @ readTextFile()
 		function renderVisualization(svToDraw, svFrequency){			
-
 			// helpers
 			setDetailsOnSubMenu(); // details on top of the visualization when sidebar is closed
 			
@@ -263,8 +262,16 @@
 
 			var rowInSVG = prepareTypeSpacing(svToDraw),
 					variants = Object.keys(svToDraw),
-					prevMaxY = 0, maxY = 0, height = 0, base = 50
+					prevMaxY = 0,
+					maxY = 0,
+					height = 0,
+					base = 50,
+					typeCount = 0
 			;
+
+			$('#sv-checkboxes input:checked').each(function(){
+				typeCount++;
+			});
 
 			// structural variants
 			for(var i = 0; i < variants.length; i++){
@@ -282,6 +289,9 @@
 						height = maxY;
 						brushHeight = height + 20;
 						$('#sv-visualization').attr('height', (height + 50));
+					}
+					else{
+						$('#sv-visualization').attr('height', 150);
 					}
 
 					prevMaxY = maxY;
@@ -320,7 +330,6 @@
 
 			retrieveDataFromDB('ref-seq-text', function (data){
 				addSequenceText(new String(data).toUpperCase());
-
 				initializePanAndZoom();
 			}); 
 
@@ -611,7 +620,8 @@
 			// shows the modal on ins marker click @ drawReference()
 			function markerClick(){
 				var startIns = Number($(this).attr('start')),
-						endIns = Number($(this).attr('end'))
+						endIns = Number($(this).attr('end')),
+						tag = this
 				;
 
 				$(this).addClass('sleep');
@@ -619,17 +629,17 @@
 
 				retrieveDataFromDB('sv-fetch-table', function (data){
 					if(data.length != 0){
-						var svIns = [], uniqueSvIns = [];
+						var svIns = [], uniqueSvIns = [], noOfRows = 0, noOfClusters = 0, clusterFrequency = {};
 
 						for(var i = 0; i < data.length; i++){
 							var svObject = data[i];
 
 							if(svObject['type'] == 'INS'){
 								if(svObject['start'] == startIns && svObject['end'] == endIns){
-									// svIns = svIns + svObject['sequence'];
 									var createObject = {};
 									createObject['sampleid'] = svObject['sampleid'];
-									createObject['sequence'] = svObject['sequence'];
+									createObject['sequence'] = svObject['sequence'].replace(/,/g, ',<br>');
+									clusterFrequency[svObject['clusterid']] = 1 + (clusterFrequency[svObject['clusterid']] || 0);
 									svIns.push(createObject);
 								}
 							}
@@ -651,28 +661,30 @@
 						startChrBp = Number($('#chr-start').val());
 						endChrBp = Number($('#chr-end').val());
 						chrNum = Number($('#chr-num-select').val());
+						noOfRows = svIns.length;
+						noOfClusters = (Object.keys(clusterFrequency)).length;
 
+						console.log(noOfRows);
+						console.log(clusterFrequency);
+						console.log(noOfClusters);
+						
 						$('#sv-modal').addClass(color);
 						$('#sv-modal-detail').text('INS');
 						$('#sv-modal-chr-detail').text(chrNum);
 						$('#sv-modal-start-detail').text(startIns + ' bp');
 						$('#sv-modal-end-detail').text(endIns + ' bp');
+						$('#return-row').text(noOfRows);
+						$('#return-cluster').text(noOfClusters);
 
 						$.jsontotable(svIns, { id: '#sv-modal-table-ins', header: true, className: 'ui selectable celled padded table remove-table-modal-ins' });
-
-						// for(var i = 0; i < insertedSeq.length; i++){
-						// 	if(insertedSeq[i] != ''){
-						// 		$('#sv-modal-insertedSeq-detail').append('<p class="sequence-delete">' + insertedSeq[i] + '<p/>');
-						// 	}
-						// }
-
-						$(this).removeClass('sleep');
+						$(tag).removeClass('sleep');
 					}
 				});	
 			}
 
 		// determine the number of branches to be visualized; works for del, dup, inv
 		function assignHotspotNumber(type, svToDraw){
+			console.log(svToDraw[type][0]);
 			// iterate through the sv's then
 				// hotspot 1. grp of overlapping intervals 2. magsolo, walang kapatong
 				// hotspot == key na lang sa svToDraw, integer starting from 1
@@ -696,7 +708,6 @@
 			hotspotFrequency[type][hotspotCount] = 1 + (hotspotFrequency[type][hotspotCount] || 0);
 			svBranchHeight = hotspotFrequency[type][hotspotCount];
 
-			// console.log('start:' + svToDraw[type][0]['start'] + ' end:' + svToDraw[type][0]['end'] + ' stackNo:' + svToDraw[type][0]['hotspot'] + ' index:' + svToDraw[type][0]['hotspotIndex']);
 			for(var i = 1; i < svToDraw[type].length; i++){
 				var nextSV = svToDraw[type][i];
 
@@ -730,8 +741,6 @@
 				if(svBranchHeight < hotspotFrequency[type][hotspotCount]){
 					svBranchHeight = hotspotFrequency[type][hotspotCount];
 				}
-
-				// console.log('start:' + svToDraw[type][i]['start'] + ' end:' + svToDraw[type][i]['end'] + ' stackNo:' + svToDraw[type][i]['hotspot'] + ' index:' + svToDraw[type][i]['hotspotIndex']);
 			}
 
 			return svBranchHeight;
@@ -754,21 +763,15 @@
 
 			for (var i = 0; i < svType.length; i++) {
 				if(svToDraw[svType[i]].length > 0){
-					var newNoOfmaxBranches = assignHotspotNumber(svType[i], svToDraw);
+					assignHotspotNumber(svType[i], svToDraw);
 				}
-				// if(newNoOfmaxBranches > noOfmaxBranches){
-				// 	noOfmaxBranches = newNoOfmaxBranches;
-				// }
 			}
 
-			noOfmaxBranches = assignHotspotNumber('INS', svToDraw);
+			if(svToDraw['INS'].length != 0){
+				noOfmaxBranches = assignHotspotNumber('INS', svToDraw);
+			}
 			rowsSVG = (noOfmaxBranches % 2) != 0 ? noOfmaxBranches - 1 : noOfmaxBranches;
 			adjustedRowsSVG = (trackHeight) * rowsSVG;
-
-			// typeSize[0] = 50 + rowsSVG; // spsce between reference genome and the first svtype visualization
-			// for (var i = 1; i < 4; i++) { // for the remaining three
-			// 	typeSize[i] = (typeSize[0] * (i+1)); // considers the number of branches on an svtype visualization
-			// }
 
 			return adjustedRowsSVG;
 		}
@@ -1342,12 +1345,10 @@
 			});
 
 			$('#zoom-in-toggle').on('click', function(){
-				// panZoomSVG.zoomAtPoint(0.01, {x: 50, y: 50})
 				panZoomSVG.zoomIn();
 			});
 
 			$('#zoom-out-toggle').on('click', function(){
-				// panZoomSVG.zoomAtPoint(-0.01, {x: 50, y: 50})
 				panZoomSVG.zoomOut();
 			});
 		}
@@ -1599,7 +1600,8 @@
 					var svType = [],
 							svArray = [],
 							returnArray = [],
-							once = false;
+							once = false,
+							typeCount = 0
 					;
 
 					startChrBp = Number($('#chr-start').val());
@@ -1609,10 +1611,14 @@
 					$('#sv-checkboxes input:checked').each(function(){
 						// gets all the checked checkboxes
 						svType.push($(this).attr('id'));
+						typeCount++;
 					});
 
 					retrieveDataFromDB('sv-fetch-view', function (data){
-						var typePool = [];
+						var typePool = [],
+								svType = []
+						;
+
 						if(data.length != 0){
 							for(var i = 0; i < data.length; i++){
 								var svObject = data[i],
@@ -1627,10 +1633,13 @@
 								svFrequency[type][cluster] = 1 + (svFrequency[type][cluster] || 0);
 							}
 
-							renderVisualization(svToDraw, svFrequency);
-							if(typePool.length < 4){
+							if(typePool.length < typeCount){
 								noSVFound(typePool);
 							}
+							else{
+								renderVisualization(svToDraw, svFrequency);
+							}
+
 							once = true;
 						}
 						else{
@@ -1986,7 +1995,21 @@
 
 			// set-up the export button
 			$('#screenshot').on('click', function(){
+				var width = Number($('#sv-visualization').attr('width')),
+						height = Number($('#sv-visualization').attr('height'))
+				;
+
+				if(width > 1280){
+					$('#sv-visualization').attr('width', '1280px');
+				}
+				if(height > 800){
+					$('#sv-visualization').attr('height', '800px');
+				}
+
 				saveSvgAsPng(document.getElementById('sv-visualization'), 'sv-visualization.png', {backgroundColor: 'white'});
+
+				$('#sv-visualization').attr('width', width);
+				$('#sv-visualization').attr('height', height);
 			});
 
 			// initialize message close
@@ -2006,9 +2029,9 @@
 			$('#brush-start').val(s);
 			$('#brush-end').val(e);
 			$('#INS').prop('checked', true); 
-			$('#INV').prop('checked', true); 
-			$('#DUP').prop('checked', true); 
-			$('#DEL').prop('checked', true); 
+			// $('#INV').prop('checked', true); 
+			// $('#DUP').prop('checked', true); 
+			// $('#DEL').prop('checked', true); 
 		}
 
 		function initializeTableExportButtons(){
