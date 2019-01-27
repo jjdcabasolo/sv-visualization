@@ -1,4 +1,3 @@
-
 # sv-visualization
 Implementation of the structural variant visualization using D3.js and jQuery.
 
