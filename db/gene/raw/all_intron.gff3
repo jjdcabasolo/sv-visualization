@@ -1,0 +1,8 @@
+##gff-version 3
+Chr1	MSU_osa1r7	gene	20	89	.	+	.	ID=LOC_Os01g02060;Name=LOC_Os01g02060;Note=ageneonchr1
+Chr1	asdkfhgeer	gene	90	150	.	+	.	ID=LOC_Os01g04040;Name=LOC_Os01g04040;Note=ageneonchr1
+Chr1	gdoJSJnope	gene	210	600	.	+	.	ID=LOC_Os01g05040;Name=LOC_Os01g05040;Note=ageneonchr1
+Chr2	yqwgwhod23	gene	40	100	.	+	.	ID=LOC_Os02g02070;Name=LOC_Os02g02070;Note=ageneonchr2
+Chr2	mhlksjmrbn	gene	178	241	.	+	.	ID=LOC_Os02g07060;Name=LOC_Os02g07060;Note=ageneonchr2
+Chr3	tngngwppts	gene	37	124	.	+	.	ID=LOC_Os03g08030;Name=LOC_Os03g08030;Note=ageneonchr3
+Chr3	srpsht82km	gene	234	300	.	+	.	ID=LOC_Os03g04030;Name=LOC_Os03g04030;Note=ageneonchr3

@@ -1,0 +1,89 @@
+.pusher {
+	background-color: #EEEEEE !important;
+}
+
+/*svg*/
+#query-details,
+#zoom-tools {
+	z-index: 100;
+	position: relative;
+}
+
+#brush-tools {
+	z-index: 100;
+  position: absolute;
+  margin-top: 87px;
+}
+
+#svg-holder {
+	margin-top: 90px;
+	margin-left: 10px;
+}
+
+.inverted {
+	background-color: #424242 !important;
+}
+
+.adjust-item-down {
+	margin-top: 5px;
+}
+
+.adjust-item-up {
+	margin-top: -5px;
+}
+
+.adjust-item-up-slider {
+	margin-top: -8px;
+}
+
+#sv-visualization-area {
+	position: absolute;
+	margin-top: -100px;
+	overflow-x: scroll;
+	width: 100%;
+	height: 100%;
+}
+
+svg#sv-visualization-ins,
+svg#sv-visualization-del,
+svg#sv-visualization-inv,
+svg#sv-visualization-dup {
+	width: 100%;
+}
+
+/*edits on semantic ui*/
+.ui.left.visible.sidebar {
+	box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.remove-padding-top {
+	padding-top: 0 !important;
+}
+
+.remove-padding-bottom {
+	padding-bottom: 0 !important;
+}
+
+.remove-margin {
+	margin: 0 !important;
+}
+
+.remove-padding {
+	padding: 0 !important;
+}
+
+#expand-brush-options {
+	width: 250px;
+}
+
+#popup-element{
+    position: absolute !important;
+}
+
+.sleep {
+	pointer-events: none;
+}
+
+.sequence-delete {
+	word-wrap: break-word;
+}

@@ -5,15 +5,161 @@ TODO
  ✔ tanungin si sir kung kailangan pang ilagay yung base pair dun sa reference genome line @done (18-02-05 20:21)
  ✔ find the format of the node variable in tubemap.js - para sa labeling ng reference genome line @done (18-02-05 20:21)
  ✔ ayusin yung variables ng pagkakadraw ng line (x1, x2, y1, y2) @done (18-02-05 20:21)
- ☐ add variables para sa current view
-  ☐ current chromosome na nipili
-  ☐ boundary nung current chromosome
+ ✔ add variables para sa current view @done (18-02-10 20:36)
+  ✔ current chromosome na nipili @done (18-02-06 17:48)
+  ✔ boundary nung current chromosome @done (18-02-10 20:36)
 - html
  ✔ add dropdown para sa selection ng chromosome number @done (18-02-05 20:22)
  ✔ add buttons for start and end ng view for chromosome @done (18-02-05 20:22)
  ✔ provide the boundary for each chromosome (end range) @done (18-02-05 20:22)
 
 05 Feb 2018:
- ☐ pwedeng gawan ng options for user friendliness
-  ☐ adjust ruler interval
-  ☐ show sequence text
+ ✔ pwedeng gawan ng options for user friendliness @done (18-02-06 17:48)
+  ✔ adjust ruler interval @done (18-02-06 17:48)
+  ✔ show sequence text @done (18-02-06 17:48)
+ ✔ baka lang may ilagay ka pa kapag dinouble click yung track (rectangle representation) : trackDoubleClick() @done (18-03-15 23:28)
+ ✔ gawin yung correct na pagrender ng start at end kapag may nakaset na @done (18-02-06 17:49)
+   ✔ same goes with the ruler, dapat nag-aadjust yung starting variable @done (18-02-06 17:49)
+ 
+ 06 Feb 2018:
+ ☐ mga itatanong kay sir
+   ✔ minimum range na iseset @done (18-03-15 23:28)
+   ✔ kung ok na yung reference genome na initial @done (18-03-15 23:28)
+   ✔ paano yung pagkakastore nung reference genome sa html, considering na sobrang laki nung file na iaupload @done (18-03-15 23:28)
+   ☐ yung kung paano kukunin yung sv sa file ano yung mga gagamiting variables to represent
+   ✘ ilan yung sv's? kasi db magmemerge siya, pag may sv magbabranch out, so ilan yung sv's na iiscan sa file @cancelled (18-03-27 15:04)
+  ✘ medyo shitty yung panning ng svg kapag zoomed out siya - emphasis SHITTY @cancelled (18-02-13 14:03)
+  ✔ ayusin yung limits chr(s) @done (18-02-06 20:24)
+    ✔ kapag maliit yung range, nagana pa rin kapag nabago yung ruler interval @done (18-02-06 20:24)
+    ✔ kapag sobra, nageextend yung ruler at yung reference genome line @done (18-02-06 20:24)
+  ✔ reset view button sa svg @done (18-02-10 20:35)
+  ✔ yung sa ruler, pwedeng magnegative yung value (resulting sa walang ruler interval) @done (18-02-10 20:35)
+
+10 Feb 2018:
+  ✔ ilipat yung basic html elements to sidebar (semantic-ized) @done (18-02-13 14:03)
+  ☐ ayusin yung shittyness ng svgpanzoom kapag nagload ng panibagong chr
+  ✔ yung starting interval ng ruler pag hindi 0 yung value ayusin @done (18-02-17 01:58)
+  ✔ simulan na yung kahit pagrender ng mga sv's @done (18-02-17 01:58)
+
+14 Feb 2017:
+  ✘ truncate mo na yung real value @cancelled (18-02-17 01:58)
+  ✔ flunking 20 dafault (extension nung both sides, equal extension) @done (18-03-15 23:29)
+  ✔ deletion minimum range: 10 @done (18-03-15 23:28)
+  ✔ insertion minimum range: 5 @done (18-03-15 23:28)
+    ✔ limit: 100 (kung ipapakita na insertion, if below pa dun, di na ipapakita) @done (18-03-15 23:28)
+  ✘ yung number of base pairs pag nagbabranch out depende pa rin pero ang set ni sir ay 5bp @cancelled (18-03-15 23:29)
+  ✔ kailangang gawin na algo ay idetermine yung portions na may sv's (hotspots daw) @done (18-03-15 23:29)
+  ✔ determine overlapping intervals para malaman yung mga regions na may sv - sila lang yung magdedetermine kung magbbranchout ba or not @done (18-03-15 23:32)
+    ✔ maximum na range para ivisualize siya 50000bp @done (18-03-27 15:03)
+  ✔ mutually exclusive yung pagview ng mga sv types, kung puro insertion ay puro insertion lang, ganown @done (18-02-17 01:58)
+  ✔ insertion: parang kagaya na lang nung sa ideogram @done (18-03-27 15:03)
+  
+  ✔ select range @done (18-02-17 01:57)
+  ✔ select sv types @done (18-02-17 01:57)
+
+  ✘ yung issue sa file reading ay babashin muna lahat @cancelled (18-03-15 23:31)
+
+  ✔ viewer na by chromosme lang @done (18-03-15 23:31)
+  ☐ lagay sa isang array yung mga indices sa file 
+
+  ✔ start - 50, end + 50 yung reference lang yung may "flakning???" @done (18-03-15 23:31)
+  ✔ strictly within the range yung mga ipapakitang sv's @done (18-03-15 23:31)
+  ✔ pagcompute nung number of base pairs kung saan magbabranch out, in @done (18-03-15 23:31)
+
+  ✔ starting range ng chromosome ay 1, 1-indexing compared sa array in cmsc na 0-indexing !important @done (18-02-17 01:57)
+  ✔ fix the ruler intervals` @done (18-02-17 01:57)  
+
+  ☐ responsive width nung sv pag nakabukas yung sidenav
+
+17 Feb 2018:
+  ☐ yung kukunin yung endpoints (putul-putol na shit; start at end for INV|DUP|DEL) para naka .data na lang
+  ☐ pwede yung input na 1 - 1001 (length chr: 1000) which is sad
+
+1 Mar 2018:
+  ✔ ayusin yung code for branching out @done (18-03-15 23:31)
+    ✔ correctly identify kung paano yung hotspots @done (18-03-15 23:31)
+
+15 Mar 2018:
+  ✔ problem with even number of hotspot (shitty yung itsura) @done (18-04-16 17:54)
+
+18 Mar 2018:
+ ✔ ayusin yung paqgbago ng flanking value @done (18-03-18 00:50)
+ ☐ yung pag nagnightmode, shitty yung deletions haha kita pa rin
+ ✘ ruler highlight -  may linya pababa tapos may number sa taas pag naghover sa ruler line @cancelled (18-05-07 21:49)
+ ☐ mas ok siguro kung yung help ay modal na lang para maraming mailagay
+ ✔ yung scrollbar ng tooltip, constant yung width and height para scrollable @done (18-05-07 21:49)
+ ✔ highlight yung branch together with reference para hindi halata yung polyline @done (18-03-18 00:50)
+
+pwede ko po bang iasssume na walang uulit na row na iisa yung kanilang cluster id?
+sample;
+chr01  10  11  AAAATGCATCGATG,GTCAGT,ATCTAG  Rangifer tarandus  1
+chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
+
+27 March 2018:
+ ✔ dup and inv - same color pero may @done (18-04-05 14:36)
+   ✔ iba iba yung kulay per type @done (18-04-05 14:36)
+   ✔ arrowhead sa inversion @done (18-04-05 14:36)
+
+ ✔ nipisan yung branch height pati yung thickness ng track @done (18-04-03 17:10)
+   ✔ set track width to 5 px @done (18-04-03 17:10)
+ 
+ ✔ gawin checkboxes yung radio button para makapamili siya ng multiple types to visualize @done (18-04-16 22:17)
+   ✔ pag walang lumabas, may message na lang na wala, hindi na siya makikihati sa view @done (18-04-16 22:17)
+
+ ✔ download image @done (18-04-24 18:04)
+ 
+ ✔ yung case na same cluster @done (18-05-07 21:48)
+ chr01  10  100  DEL;35  Ninox superciliaris  1
+ chr01  20  100  DEL;35  Ninox superciliaris  1
+ ✔ use the first occurence of the similar cluster @done (18-05-07 21:48)
+ ✔ group via cluster @done (18-05-07 21:48)
+ ✔ assumption: sorted by chromosome, then start, then cluster && single occurence @done (18-05-07 21:49)
+ ✔ same cluster id, imemerge @done (18-05-07 21:49)
+ ✔ branching factor na ay yung branch, isang branch, isang cluster (ichecheck ) @done (18-05-07 21:49)
+   ✔ hindi pwedeng magkaroon ng in between @done (18-05-07 21:49)
+   ✔ gagamitin ko ay walang redundant cluster @done (18-05-07 21:49)
+   ✔ one occurence, preprocess @done (18-05-07 21:49)
+   ✔ another file: mapping ng samples @done (18-05-07 21:49)
+ ✔ ibibigay ni sir yung file dun sa preprocessing na pagmemerge ng clusters @done (18-05-07 21:49)
+   ✔ isang row, isang cluster na lang @done (18-05-07 21:49)
+
+ ✔ save sa SQL yung file na binigay ni sir @done (18-05-07 21:48)
+   ✔ yung type at yung length a magkaibang column sa mysql @done (18-05-07 21:48)
+
+ ✔ brush @done (18-05-01 13:26)
+   ✔ pag gumawa siya ng brush, automatic may lalabas na modal @done (18-05-01 13:26)
+ ✔ panibagong tapos may modal na magdiddisplay ng table @done (18-05-01 13:26)
+ ✔ button na save as / download as .csv or .tsv @done (18-04-24 18:05)
+   ✔ pag csv, pwedeng @done (18-04-24 18:05)
+   chr01,15,50,DEL;35,Ninox superciliaris,1
+   ✔ tsv lahat ng column @done (18-04-24 18:05)
+   chr01  10  100  DEL;35  Ninox superciliaris  1
+   ☐ bed chr, start, end, save file extension as .bed
+   chr01  60  80  DEL;20;Rana sp.;17
+
+ ✘ yung admin panel na pagupload ng files @cancelled (18-05-07 21:48)
+ ✘ append at overwrite yung files @cancelled (18-05-07 21:48)
+
+ ☐ gene annotation file 
+
+ ☐ user defined data
+ ☐ define new sv
+
+ ☐ submit insertion to blast
+   ☐ blastn suite tignan mo na lang yung email ni sir
+   ☐ may button sa ilalim ng inserted sequence para gamitin sa blast something
+
+01 May 2018:
+ ✘ sir pwede po bang and iindicate na chr-length ay yung max interval sa sv file para hindi na mag-abala yung user na tignan yung mga empty parts? @cancelled (18-05-07 13:32)
+
+ 02 May 2018:
+ ☐ baguhin yung itsura ng deletions because it is shit
+ ☐ extend the sequence text upto the flank value
+ ☐ add the gene annotation file
+
+for brush:
+ ☐ end nasa loob || start nasa loob
+ ☐ end > bounds && start < bounds
+ ☐ tanggalin yung spacesa gitna ng chr at number
+ ☐ 
+

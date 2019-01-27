@@ -1,2 +1,4 @@
 # remove the large data file
-data
+node_modules
+
+log.todo
