@@ -213,13 +213,32 @@
 
       <div class="ui tab" data-tab="details">
         <div class="item">
-          <h4>File details</h4>
+          <h4>File directories</h4>
         </div> 
+        <div class="item">
+          <div class="ui sub header night-mode">Reference Genome:</div>
+          <p class="sequence-delete" id="file-ref"></p>
+        </div>
+        <div class="item">
+          <div class="ui sub header night-mode">Structural Variants:</div>
+          <div class="ui sub header night-mode">Insertion:</div>
+          <p class="sequence-delete" id="file-sv-ins"></p>
+          <div class="ui sub header night-mode">Deletion:</div>
+          <p class="sequence-delete" id="file-sv-del"></p>
+          <div class="ui sub header night-mode">Duplication:</div>
+          <p class="sequence-delete" id="file-sv-dup"></p>
+          <div class="ui sub header night-mode">Inversion:</div>
+          <p class="sequence-delete" id="file-sv-inv"></p>
+        </div>
+        <div class="item">
+          <div class="ui sub header night-mode">Gene Annotations:</div>
+          <p class="sequence-delete" id="file-gene"></p>
+        </div>
       </div>
 
       <div class="ui tab" data-tab="help">
         <div class="item">
-          <h4>How to use</h4>
+          <h4>How to use</h4>
         </div> 
       </div>
     </div>
@@ -231,7 +250,7 @@
             <div class="ui compact icon labeled menu" id="query-details">
               <div class="item">
                 <i class="info circle icon"></i>
-                Details
+                File
               </div>
               <div class="item adjust-item-down">
                 <div class="ui mini vertical statistic">
@@ -272,23 +291,23 @@
           </div>  
           <div class="row remove-padding-top remove-padding-bottom" id="zoom-tools">
             <div class="ui compact icon menu">
-              <a class="item" id="zoom-in-toggle">
+              <a class="item" id="zoom-in-toggle" data-tooltip="Zoom in" data-variation="basic">
                 <i class="zoom in icon"></i>
               </a>
-              <a class="item" id="zoom-out-toggle">
+              <a class="item" id="zoom-out-toggle" data-tooltip="Zoom out" data-variation="basic">
                 <i class="zoom out icon"></i>
               </a>
-              <a class="item" id="reset-toggle">
+              <a class="item" id="reset-toggle" data-tooltip="Reset view" data-variation="basic">
                 <i class="refresh icon"></i>
               </a>
-              <a class="item" id="fit-toggle">
+              <a class="item" id="fit-toggle" data-tooltip="Fit">
                 <i class="expand icon"></i>
               </a>
             </div>
           </div>
           <div class="row remove-padding-top remove-padding-bottom" id="brush-tools">
             <div class="ui compact icon menu">
-              <a class="item" id="brush-options-toggle">
+              <a class="item" id="brush-options-toggle" data-tooltip="Adjust brush">
                 <i class="options icon"></i>
               </a>
               <div class="ui popup flowing transition hidden" id="expand-brush-options">
@@ -314,8 +333,11 @@
                   </div>
                 </div>
               </div>
-              <a class="item" id="show-table-toggle">
-                <i class="table icon" id="table-icon-tool"></i>
+              <a class="item" id="query-table-toggle" data-tooltip="Query selected SV's">
+                <i class="save icon" id="save-icon-tool"></i>
+              </a>
+              <a class="item sleep" id="show-table-toggle" data-tooltip="Show selected SV's">
+                <i class="close icon" id="table-icon-tool"></i>
               </a>
             </div>
           </div>

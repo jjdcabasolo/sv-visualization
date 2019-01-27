@@ -1,35 +1,14 @@
 // Author: John Jourish DC. Abasolo
 // Description: Implementation of the structural variant visualization using D3.js and jQuery
 
-// const sqlite = require('./sqlite');
-// sqlite.openSVDB();
-// sqlite.getSV('chr01', 'DEL', 1000, 1100);
-// sqlite.closeSVDB();
-
-// const jsdom = require('jsdom');
-
-// jsdom.env({
-// 	html: '',
-// 	features: { QuerySelector: true },
-// 	done: function(errors, window){
-		// initialize jQuery
-		// var $ = require('jquery')(window);
-		
-		// if(errors){
-		// 	console.error(errors);
-		// 	return;
-		// }
-
 		// GLOBAL CONSTANTS
 		// - file-related
-		// const fileDirRefGenome = 'data/IRGSP-1.0_genome.fa';
-		// const fileDirRefGenome = '../../data/dummyref.txt';
-		// const fileDirSVDel = '../../data/dummysv-del.txt';
-
-		const fileDirRefGenome = '/db/dummydata/dummyref.txt';
-		const fileDirSVDel = '/db/dummydata/dummysv-del.txt';
-
-		// const fileDirSVDel = 'data/dummysv-ins.txt';
+    const fileRef = './db/ref/raw/IRGSP-1.0_genome.fa';
+    const fileSVIns = './db/sv/raw/NB_INS_mergesam_hclust.bed';
+    const fileSVDel = './db/sv/raw/NB_DEL_mergesam_hclust.bed';
+    const fileSVDup = './db/sv/raw/NB_DUP_mergesam_hclust.bed';
+    const fileSVInv = './db/sv/raw/NB_INV_mergesam_hclust.bed';
+    const fileGene = './db/gene/raw/all_intron.gff3';
 		// - svg-related
 		const svg = d3.select('#sv-visualization');
 		const svgTopMargin = 50; // in px
@@ -37,11 +16,11 @@
 		const trackHeight = 5; // in px
 		const minimumRange = 10; // in bp
 		const maximumRange = 50000; // in bp
-
 		const minInterval = 10; // in bp
 		const maxInterval = 100; // in bp
 		const minFlank = 20; // in bp
 		const maxFlank = 50; // in bp
+		const isRealData = false;		
 
 		// GLOBAL VARIABLES
 		var referenceGenome = [];
@@ -99,51 +78,60 @@
 				$('#chr-num-select').append(chrTag);
 			}
 
-			// Capped with the species that has the maximum number of chromosomes, Ophioglossum (fern)
-			// that has 1260 chromosomes. Taken from https://www.quora.com/What-animal-has-the-largest-number-of-chromosomes
-			const maxNumOfChr = 1260;
-			var stop = false, i = 1;
+			if(isRealData){
+				// Capped with the species that has the maximum number of chromosomes, Ophioglossum (fern)
+				// that has 1260 chromosomes. Taken from https://www.quora.com/What-animal-has-the-largest-number-of-chromosomes
+				const maxNumOfChr = 1260;
+				var stop = false, i = 1;
 
-			var getLength = setInterval(function(){
-				var rname = 'chr';
+				var getLength = setInterval(function(){
+					var rname = 'chr';
 
-				if(i < 10) rname = rname + '0';
-				rname = rname + i;
+					if(i < 10) rname = rname + '0';
+					rname = rname + i;
 
-				$.ajax({
-					cache: false,
-					type: 'get',
-					url: '/ref/chr/length',
-					data: {
-						'chr': rname
-					}
-				}).done(function(data) {
-					if(data == 0){
-						clearInterval(getLength);
-						
-						// sorts the added chromsomes at the dropdown (unsorted intially due to its asynchronous nature)
-						// taken from https://stackoverflow.com/a/7466196
-						$('#chr-num-select').html(
-							$('#chr-num-select option').sort(function (a, b) {
-								return a.text == b.text ? 0 : a.text < b.text ? -1 : 1
-							})
-						); 
+					$.ajax({
+						cache: false,
+						type: 'get',
+						url: '/ref/chr/length',
+						data: {
+							'chr': rname
+						}
+					}).done(function(data) {
+						if(data == 0){
+							clearInterval(getLength);
+							
+							// sorts the added chromsomes at the dropdown (unsorted intially due to its asynchronous nature)
+							// taken from https://stackoverflow.com/a/7466196
+							$('#chr-num-select').html(
+								$('#chr-num-select option').sort(function (a, b) {
+									return a.text == b.text ? 0 : a.text < b.text ? -1 : 1
+								})
+							); 
 
-						// default select chromosome 1
-						$('#chr-num-select').val('01');
+							// default select chromosome 1
+							$('#chr-num-select').val('01');
 
-						// update the chromsome length
-						retrieveDataFromDB('ref-chr-length', function (data){
-							$('#max-count').text(data);
-						});
-					}
-					else{
-						addChrToDropdown(rname);
-					}
-				});
+							// update the chromsome length
+							retrieveDataFromDB('ref-chr-length', function (data){
+								$('#max-count').text(data);
+							});
+						}
+						else{
+							addChrToDropdown(rname);
+						}
+					});
 
-				i++;
-			}, 10);
+					i++;
+				}, 10);
+			}
+			else{
+				// for the reference genome dummy data
+				addChrToDropdown('chr 01');
+				addChrToDropdown('chr 02');
+				addChrToDropdown('chr 03');
+				$('#max-count').text(1080);
+			}
 		}
 
 		function retrieveDataFromDB(type, callback){
@@ -154,6 +142,23 @@
 			rname = rname + chrNum;
 
 			switch(type){
+				case 'gene-annotations': // gene
+					rname = 'Chr' + chrNum;
+
+					$.ajax({
+						cache: false,
+						type: 'get',
+						url: '/genes',
+						data: {
+							'chr': rname,
+							'start': startChrBp,
+							'end': endChrBp,
+						}
+					}).done(function(data) {
+						return callback(data);
+					});
+					break;
+
 				case 'ref-seq-text': // ref
 					var startFlank = startChrBp - flankBp,
 							endFlank = (endChrBp - startChrBp) + (flankBp * 2);
@@ -191,7 +196,9 @@
 					var once = false;
 					$('#chr-coordinates').addClass('loading disabled');
 					$('#table-icon-tool').remove();
-					$('#show-table-toggle').addClass('sleep');
+					$('#save-icon-tool').remove();
+					$('#query-table-toggle').addClass('sleep');
+					$('#query-table-toggle').append('<div class="ui active inline mini loader" id="save-icon-loading"></div>');
 					$('#show-table-toggle').append('<div class="ui active inline mini loader" id="table-icon-loading"></div>');
 
 					$('#sv-checkboxes input:checked').each(function(){
@@ -208,8 +215,11 @@
 						}).done(function(data) {
 							$('#chr-coordinates').removeClass('loading disabled');
 							$('#table-icon-loading').remove();
+							$('#save-icon-loading').remove();
+							$('#query-table-toggle').removeClass('sleep');
 							$('#show-table-toggle').removeClass('sleep');
 							if(!once){
+								$('#query-table-toggle').append('<i class="save icon" id="save-icon-tool"></i>');
 								$('#show-table-toggle').append('<i class="table icon" id="table-icon-tool"></i>');
 								once = true;
 							}
@@ -242,9 +252,7 @@
 					});
 					break;
 				
-
 				default:
-					console.log('Kabahan ka na.');
 					break;
 			}
 		}
@@ -288,10 +296,15 @@
 					if(height < maxY){
 						height = maxY;
 						brushHeight = height + 20;
-						$('#sv-visualization').attr('height', (height + 50));
+						$('#sv-visualization').attr('height', (height + 80));
 					}
 					else{
-						$('#sv-visualization').attr('height', 150);
+						brushHeight = maxY + 20;
+						$('#sv-visualization').attr('height', (maxY + 50));
+						if(maxY == 0){
+							brushHeight = 100 * typeCount;
+							$('#sv-visualization').attr('height', (brushHeight + 50));
+						}
 					}
 
 					prevMaxY = maxY;
@@ -299,8 +312,9 @@
 				}
 			}
 
-			// adds the pop-ups for sv track/marker and brush
-			addPopups();
+			drawGeneAnnotations(base);
+
+			addPopups(); // adds the pop-ups for sv track/marker and brush
 
 			addGrid();
 		}
@@ -330,7 +344,6 @@
 
 			retrieveDataFromDB('ref-seq-text', function (data){
 				addSequenceText(new String(data).toUpperCase());
-				initializePanAndZoom();
 			}); 
 
 			// adjusts the svg for it to be scrollable
@@ -664,10 +677,6 @@
 						noOfRows = svIns.length;
 						noOfClusters = (Object.keys(clusterFrequency)).length;
 
-						console.log(noOfRows);
-						console.log(clusterFrequency);
-						console.log(noOfClusters);
-						
 						$('#sv-modal').addClass(color);
 						$('#sv-modal-detail').text('INS');
 						$('#sv-modal-chr-detail').text(chrNum);
@@ -684,7 +693,6 @@
 
 		// determine the number of branches to be visualized; works for del, dup, inv
 		function assignHotspotNumber(type, svToDraw){
-			console.log(svToDraw[type][0]);
 			// iterate through the sv's then
 				// hotspot 1. grp of overlapping intervals 2. magsolo, walang kapatong
 				// hotspot == key na lang sa svToDraw, integer starting from 1
@@ -1065,6 +1073,68 @@
 			$('.sample-genome').css('fill', color);
 		}
 
+		function drawGeneAnnotations(refToSVSpace){
+			function locateXCoordinate(start){
+				var offset = svgLeftMargin + bpToPx(flankBp),
+						x = 0
+				;
+				
+				startChrBp = Number($('#chr-start').val());
+				
+				x = (startChrBp == 1) ? (offset + bpToPx(start)) : (offset + bpToPx(start - startChrBp));
+				return x;
+			}
+
+			// determines the y position of the track/sv
+			function locateYCoordinate(d){
+				return y = svgTopMargin + refToSVSpace + 20;
+			}
+
+			function getAttribute(d){
+				var content = d['attributes'].split(';')
+						id = content[0].replace('ID=', '')
+				;
+
+				svg
+					.append('g')
+						.attr('class', 'gene-id')
+					.append('text')
+						.attr('x', function(){ return locateXCoordinate(d['start']) })
+						.attr('y', function(){ return locateYCoordinate(d) - 10 })
+						.attr('font-family', 'Courier, "Lucida Console", monospace')
+						.attr('font-size', '12px')
+						.attr('fill', 'black')
+					.text(id)
+					.style('pointer-events', 'none')
+				;
+
+				return id;
+			}
+
+			retrieveDataFromDB('gene-annotations', function (data){
+				svg
+					.selectAll('gene-annotations')		
+					.data(data)
+						.enter()
+					.append('rect')
+						.attr('x', function(d){ return locateXCoordinate(d['start']) })
+						.attr('y', function(d){ return locateYCoordinate(d) })
+						.attr('width', function(d) { return bpToPx((d['end'] - d['start'])) } )
+						.attr('height', trackHeight)
+						.attr('color', '#212121')
+						.attr('start', function(d) { return d['start'] })
+						.attr('end', function(d) { return d['end'] })
+						.attr('id', function(d) { return getAttribute(d) })
+					.style('fill', '#212121')
+					.on('mouseover', trackMouseOver)
+					.on('mouseout', trackMouseOut)
+					.on('click', trackClick)
+				;
+
+				initializePanAndZoom();
+			})
+		}
+
 		// add popup on track click [D3 + jQuery] @ renderVisualization()
 		function addPopups(){
 			var popupSVClick =
@@ -1270,23 +1340,6 @@
 			$('#brush-label-length').text(lengthBrush);
 		}
 
-		function brushEnded(){
-			retrieveDataFromDB('sv-fetch-table', function (data){
-				if(data.length != 0){
-					svToTable = {'INS':[], 'DEL':[], 'INV':[], 'DUP':[]};
-
-					for(var i = 0; i < data.length; i++){
-						var svObject = data[i],
-								type = svObject['type'],
-								cluster = Number(svObject['clusterid']);
-
-						svObject['length'] = svObject['end'] - svObject['start'];
-						svToTable[svObject['type']].push(svObject);
-					}
-				}
-			});	
-		}
-
 		// draws a brush on top of the sv visualization @ setupVisualizationTools()
 		function drawBrush(){
 			startChrBp = Number($('#chr-start').val());
@@ -1303,7 +1356,6 @@
 				.brushX()
 					.extent([[startPx, 30], [endPx, brushHeight]])
 			 	.on('brush', brushed)
-			 	.on('end', brushEnded)
 			;
 
 			svg
@@ -1320,6 +1372,7 @@
 		// initialize pan and zoom for the whole SVG [jQuery plugin] @ renderVisualization()
 		function initializePanAndZoom(){
 			if(!panZoomSVG == null)	panZoomSVG.destroy();
+			var zoomFactor = 1;
 
 			panZoomSVG = svgPanZoom('#sv-visualization', {
 				panEnabled: false,
@@ -1327,13 +1380,14 @@
 				dblClickZoomEnabled: false,
 				mouseWheelZoomEnabled: false,
 				preventMouseEventsDefault: true,
-				zoomScaleSensitivity: 0.01,
+				zoomScaleSensitivity: 0.1,
 				minZoom: 0.1,
 				maxZoom: 5,
 				fit: false,
 				contain: false,
 				center: false
 			});
+
 
 			// assign tools on zoom tool
 			$('#reset-toggle').on('click', function(){
@@ -1345,11 +1399,11 @@
 			});
 
 			$('#zoom-in-toggle').on('click', function(){
-				panZoomSVG.zoomIn();
+				panZoomSVG.zoomAtPointBy(zoomFactor + 0.1, {'x': 0, 'y': 0});
 			});
 
 			$('#zoom-out-toggle').on('click', function(){
-				panZoomSVG.zoomOut();
+				panZoomSVG.zoomAtPointBy(zoomFactor - 0.1, {'x': 0, 'y': 0});
 			});
 		}
 
@@ -1367,9 +1421,19 @@
 		function initializeActionListeners(){
 			// reloads the visualization on chr change
 			$('#chr-num-select').on('change', function(){
-				retrieveDataFromDB('ref-chr-length', function (data){
-					$('#max-count').text(data);
-				});
+				if(isRealData){
+					retrieveDataFromDB('ref-chr-length', function (data){
+						$('#max-count').text(data);
+					});
+				}
+				else{
+					var no = Number($('#chr-num-select').val());
+					switch(no){
+						case 1: $('#max-count').text('1080'); break;
+						case 2: $('#max-count').text('943'); break;
+						case 3: $('#max-count').text('600'); break;
+					}
+				}
 			});
 
 			// sets the max and min even the user specifies out of boundaries
@@ -1403,6 +1467,15 @@
 				retrieveDataFromDB('ref-chr-length', function (data){
 					var endChrBp = Number($('#chr-end').val()),
 							maxBound = data;
+
+					if(!isRealData){
+						var no = Number($('#chr-num-select').val());
+						switch(no){
+							case 1: maxBound = Number($('#max-count').text('1080')); break;
+							case 2: maxBound = Number($('#max-count').text('943')); break;
+							case 3: maxBound = Number($('#max-count').text('600')); break;
+						}
+					}
 
 					if(endChrBp > maxBound) $('#chr-end').val(maxBound);
 				});
@@ -1503,8 +1576,12 @@
 
 			$('#chr-coordinates').click(function(){
 				svg.selectAll('*').remove(); // clear svg	
+
 				$('#sv-visualization').attr('width', '100%');
 				$('#sv-visualization').attr('height', '0');
+
+				$('#show-table-toggle').addClass('sleep');
+				$('#table-icon-tool').removeClass('table').addClass('close');
 
 				retrieveDataFromDB('ref-chr-length', function (data){
 					var maxBound = data,
@@ -1512,6 +1589,15 @@
 							svType = []
 					;
 			
+					if(!isRealData){
+						var no = Number($('#chr-num-select').val());
+						switch(no){
+							case 1: maxBound = Number($('#max-count').text('1080')); break;
+							case 2: maxBound = Number($('#max-count').text('943')); break;
+							case 3: maxBound = Number($('#max-count').text('600')); break;
+						}
+					}
+
 					startChrBp = Number($('#chr-start').val());
 					endChrBp = Number($('#chr-end').val());
 
@@ -1633,6 +1719,7 @@
 								svFrequency[type][cluster] = 1 + (svFrequency[type][cluster] || 0);
 							}
 
+
 							if(typePool.length < typeCount){
 								noSVFound(typePool);
 							}
@@ -1710,6 +1797,13 @@
 			$('#query-details').css({'-webkit-transform':'translate(-800px, 0px)'});
 			$('#zoom-tools').css({'-webkit-transform':'translate(-800px, 0px)'});
 			$('#brush-tools').css({'-webkit-transform':'translate(-800px, 0px)'});
+
+    	$('#file-ref').text(fileRef);
+    	$('#file-sv-ins').text(fileSVIns);
+    	$('#file-sv-del').text(fileSVDel);
+    	$('#file-sv-dup').text(fileSVDup);
+    	$('#file-sv-inv').text(fileSVInv);
+    	$('#file-gene').text(fileGene);
 		}
 
 		function changeToolState(iconID, addClassID, removeClassID, buttonID){
@@ -1795,7 +1889,7 @@
 
 					// shows the zoom tools
 					$('#zoom-tools').css({
-						'-webkit-transform':'translate(514px, 0px)',
+						'-webkit-transform':'translate(574px, 0px)',
 						'transition':'transform 0.5s ease'
 					});
 
@@ -1868,7 +1962,7 @@
 					
 					// shows the zoom tools
 					$('#brush-tools').css({
-						'-webkit-transform':'translate(682px, 0px)',
+						'-webkit-transform':'translate(742px, 0px)',
 						'transition':'transform 0.5s ease'
 					});
 
@@ -1876,6 +1970,23 @@
 					drawBrush(rowInSVG);
 				}
 				brushToggle = !brushToggle;
+			});
+
+			$('#query-table-toggle').on('click', function(){
+				retrieveDataFromDB('sv-fetch-table', function (data){
+					if(data.length != 0){
+						svToTable = {'INS':[], 'DEL':[], 'INV':[], 'DUP':[]};
+
+						for(var i = 0; i < data.length; i++){
+							var svObject = data[i],
+									type = svObject['type'],
+									cluster = Number(svObject['clusterid']);
+
+							svObject['length'] = svObject['end'] - svObject['start'];
+							svToTable[svObject['type']].push(svObject);
+						}
+					}
+				});
 			});
 				
 			$('#show-table-toggle').on('click', function(){
@@ -1886,13 +1997,19 @@
 					$('.remove-actions').remove();
 
 					var keys = Object.keys(svToTable),
-							arrayOfObjects
+							arrayOfObjects = []
 					;
 
 					copySV = JSON.parse(JSON.stringify(svToTable));
 
 					for(var i = 0; i < keys.length; i++){
 						arrayOfObjects = copySV[keys[i]];
+
+						for(var j = 0; j < arrayOfObjects.length; j++){
+							if(arrayOfObjects[j]['type'] == 'INS'){
+								delete arrayOfObjects[j]['sequence']; 
+							}
+						}
 						
 						if(arrayOfObjects.length > 0){
 							// adds header for each table
@@ -1982,8 +2099,7 @@
 						$('#dismissible-brush').addClass('hidden');
 
 						evalStartPx = startChrBp - brushStart;
-
-						startPx = flankPx + svgLeftMargin + evalStartPx;
+						startPx = flankPx + svgLeftMargin + bpToPx(Math.abs(evalStartPx));
 						endPx = bpToPx(brushEnd - brushStart) + startPx + 7;
 						brushed();
 
@@ -2020,15 +2136,15 @@
 			// automation
 			// var s = 1;
 			// var e = 100;
-			var s = 1000;
-			var e = 10000;
 			// var s = 20;
 			// var e = 75;
-			$('#chr-start').val(s);
-			$('#chr-end').val(e);
-			$('#brush-start').val(s);
-			$('#brush-end').val(e);
-			$('#INS').prop('checked', true); 
+			// var s = 1000;
+			// var e = 11000;
+			// $('#chr-start').val(s);
+			// $('#chr-end').val(e);
+			// $('#brush-start').val(s);
+			// $('#brush-end').val(e);
+			// $('#INS').prop('checked', true); 
 			// $('#INV').prop('checked', true); 
 			// $('#DUP').prop('checked', true); 
 			// $('#DEL').prop('checked', true); 
@@ -2083,5 +2199,3 @@
 
 		// start the visualization
 		initialize();		
-// 	}
-// })

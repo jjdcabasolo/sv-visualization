@@ -39,6 +39,14 @@ app.get('/ref/chr/length', function(req, res){
 	fastareader.getChrLength(req.query.chr, callback);		
 });
 
+app.get('/genes', function(req, res){
+	function callback(data){
+		res.status(200).send(data);
+	}
+	sqlite.openDB('./db/gene/processed/gene.db');
+	sqlite.getGenes(req.query.chr, req.query.start, req.query.end, callback);		
+});
+
 app.get('/', function(req, res){
 	res.sendFile(__dirname + '/index.html');
 });

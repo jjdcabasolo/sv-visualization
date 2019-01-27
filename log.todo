@@ -156,3 +156,10 @@ chr01  10  11  tgAGgatAGT,AGTA,AGTCA  Amaranth  1
  ☐ baguhin yung itsura ng deletions because it is shit
  ☐ extend the sequence text upto the flank value
  ☐ add the gene annotation file
+
+for brush:
+ ☐ end nasa loob || start nasa loob
+ ☐ end > bounds && start < bounds
+ ☐ tanggalin yung spacesa gitna ng chr at number
+ ☐ 
+
